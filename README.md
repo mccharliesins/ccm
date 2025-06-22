@@ -1,15 +1,56 @@
 # Creator Climb
 
-A Next.js application to help creators focus and get trending ideas.
+A Next.js application designed to help content creators focus and discover trending ideas for their YouTube channels.
 
-## Features
+## 🚀 Features
 
-- User authentication with local storage
-- YouTube channel management
-- Dashboard with analytics and content ideas
-- Responsive design
+- **Authentication System**: Local storage-based user management with signup, login, and session persistence
+- **YouTube Channel Management**: Add and track multiple YouTube channels
+- **Content Ideas Generation**: Get AI-powered content suggestions tailored to your niche
+- **Related Channels Analysis**: Discover similar channels for collaboration opportunities
+- **Performance Analytics**: Track video performance and audience engagement
+- **Responsive Design**: Optimized for both desktop and mobile devices
 
-## Setup
+## 📋 Project Structure
+
+```
+src/
+├── app/                      # Next.js App Router pages
+│   ├── layout.tsx           # Root layout with auth provider
+│   ├── page.tsx             # Landing page with hero section
+│   ├── dashboard/           # Main dashboard
+│   ├── content-ideas/       # Content ideas page
+│   ├── login/ & signup/     # Authentication pages
+│   └── settings/            # User settings
+├── components/              # Reusable React components
+│   ├── Header.tsx           # Navigation header
+│   ├── ChannelCard.tsx      # YouTube channel display card
+│   ├── ChannelsList.tsx     # List of user's channels
+│   ├── RecentVideos.tsx     # Recent videos component
+│   └── ContentIdeas.tsx     # Content idea generation
+└── lib/                     # Utility libraries
+    ├── auth.tsx             # Authentication context and hooks
+    ├── youtube.tsx          # YouTube channel management
+    └── youtube-api.ts       # YouTube API integration
+```
+
+## 🛠️ Technology Stack
+
+- **Framework**: Next.js 15.3.4 (App Router)
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4
+- **Authentication**: Local storage-based auth
+- **API Integration**: YouTube Data API v3
+- **Deployment**: Vercel-ready
+
+## 🚦 Getting Started
+
+### Prerequisites
+
+- Node.js 18.x or higher
+- YouTube Data API key
+
+### Installation
 
 1. Clone the repository
 
@@ -25,13 +66,13 @@ A Next.js application to help creators focus and get trending ideas.
    ```
 
 3. Set up environment variables
-   Create a `.env.local` file in the root directory with the following content:
+   Create a `.env.local` file in the root directory with:
 
    ```
    NEXT_PUBLIC_YOUTUBE_API_KEY=YOUR_API_KEY
    ```
 
-   Replace `YOUR_API_KEY` with your actual YouTube Data API key. You can obtain one from the [Google Cloud Console](https://console.cloud.google.com/).
+   Replace `YOUR_API_KEY` with your YouTube Data API key from the [Google Cloud Console](https://console.cloud.google.com/).
 
 4. Run the development server
 
@@ -41,52 +82,55 @@ A Next.js application to help creators focus and get trending ideas.
 
 5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-## Environment Variables
+## 🔑 Environment Variables
 
 - `NEXT_PUBLIC_YOUTUBE_API_KEY`: YouTube Data API key for fetching channel information
 
-## Deployment
+## 🧩 Core Features
 
-This project is ready to be deployed on Vercel. Simply connect your GitHub repository to Vercel and it will be automatically deployed.
+### Authentication System
 
-## Built With
+- Local storage-based user management
+- User registration and login
+- Persistent sessions
+- Context-based auth state management
 
-- [Next.js](https://nextjs.org/) - React framework
-- [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
-- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
-- [YouTube Data API](https://developers.google.com/youtube/v3) - For fetching channel information
+### YouTube Integration
 
-## Getting Started
+- Channel information fetching
+- Video data retrieval
+- Related channels discovery
+- Content idea generation
+- Video performance analytics
 
-First, run the development server:
+### Dashboard
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Overview of user's channels
+- Recent videos display
+- Related channels analysis
+- Tabbed navigation interface
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Content Ideas Generation
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- AI-powered content suggestions
+- Trending topic analysis
+- Viral potential scoring
+- Keyword optimization
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🚢 Deployment
 
-## Learn More
+This project is configured for deployment on Vercel:
 
-To learn more about Next.js, take a look at the following resources:
+1. Connect your GitHub repository to Vercel
+2. Set up the required environment variables
+3. Deploy with a single click
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📚 Learn More
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- [Next.js Documentation](https://nextjs.org/docs)
+- [YouTube Data API Documentation](https://developers.google.com/youtube/v3/docs)
+- [Tailwind CSS Documentation](https://tailwindcss.com/docs)
 
-## Deploy on Vercel
+## 📝 License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This project is licensed under the MIT License - see the LICENSE file for details.
