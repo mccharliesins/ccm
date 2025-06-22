@@ -573,7 +573,13 @@ export async function findRelatedChannels(
     }
     
     // Extract video information for keyword generation
-    const videoInfo = videosData.items.map((video: any) => ({
+    const videoInfo = videosData.items.map((video: {
+      snippet: {
+        title: string;
+        description: string;
+        tags?: string[];
+      }
+    }) => ({
       title: video.snippet.title,
       description: video.snippet.description,
       tags: video.snippet.tags
