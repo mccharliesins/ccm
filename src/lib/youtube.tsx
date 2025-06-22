@@ -1,6 +1,6 @@
 "use client";
 
-import { YouTubeChannelInfo } from "./youtube-api";
+import { YouTubeChannelInfo, YouTubeVideoInfo } from "./youtube-api";
 
 // Define YouTube channel type
 export type YouTubeChannel = {
@@ -81,4 +81,88 @@ export function removeChannel(id: string): void {
   const channels = getChannels();
   const updatedChannels = channels.filter((channel) => channel.id !== id);
   localStorage.setItem("youtube_channels", JSON.stringify(updatedChannels));
+}
+
+// Function to store channel videos in localStorage
+export function storeChannelVideos(
+  channelId: string,
+  videos: YouTubeVideoInfo[]
+): void {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    // Store with timestamp for cache invalidation
+    const videoData = {
+      videos,
+      timestamp: Date.now(),
+      channelId,
+    };
+
+    localStorage.setItem(
+      `youtube_videos_${channelId}`,
+      JSON.stringify(videoData)
+    );
+  } catch (error) {
+    console.error("Failed to store channel videos in localStorage", error);
+  }
+}
+
+// Function to get channel videos from localStorage
+export function getChannelVideos(
+  channelId: string
+): { videos: YouTubeVideoInfo[]; timestamp: number } | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const videoDataJson = localStorage.getItem(`youtube_videos_${channelId}`);
+    if (!videoDataJson) return null;
+
+    return JSON.parse(videoDataJson);
+  } catch (error) {
+    console.error("Failed to get channel videos from localStorage", error);
+    return null;
+  }
+}
+
+// Function to get all stored videos across channels
+export function getAllVideos(): YouTubeVideoInfo[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const channels = getChannels();
+    let allVideos: YouTubeVideoInfo[] = [];
+
+    channels.forEach((channel) => {
+      if (channel.channelInfo?.id) {
+        const videoData = getChannelVideos(channel.channelInfo.id);
+        if (videoData) {
+          allVideos = [...allVideos, ...videoData.videos];
+        }
+      }
+    });
+
+    // Sort by publish date (newest first)
+    return allVideos.sort(
+      (a, b) =>
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    );
+  } catch (error) {
+    console.error("Failed to get all videos from localStorage", error);
+    return [];
+  }
+}
+
+// Check if videos need to be refreshed (older than 1 hour)
+export function shouldRefreshVideos(channelId: string): boolean {
+  const videoData = getChannelVideos(channelId);
+  if (!videoData) return true;
+
+  const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
+  return Date.now() - videoData.timestamp > oneHour;
 }

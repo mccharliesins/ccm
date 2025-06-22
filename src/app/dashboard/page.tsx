@@ -7,6 +7,7 @@ import Link from "next/link";
 import { getChannels, updateChannel, YouTubeChannel } from "@/lib/youtube";
 import { fetchChannelInfo } from "@/lib/youtube-api";
 import ChannelsList from "@/components/ChannelsList";
+import RecentVideos from "@/components/RecentVideos";
 
 export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -83,49 +84,64 @@ export default function Dashboard() {
     switch (activeTab) {
       case "overview":
         return (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-              Welcome, {user?.username}!
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              This is your dashboard overview. Here you can track your content
-              performance, get trending ideas, and manage your YouTube channels.
-            </p>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div
-                style={{ backgroundColor: "var(--primary-light)" }}
-                className="p-4 rounded-lg"
-              >
-                <h4 style={{ color: "var(--primary)" }} className="font-medium">
-                  Content Ideas
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Discover trending topics for your next content.
-                </p>
-              </div>
-              <div
-                style={{ backgroundColor: "var(--success-light)" }}
-                className="p-4 rounded-lg"
-              >
-                <h4 style={{ color: "var(--success)" }} className="font-medium">
-                  Performance
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Track how your content is performing.
-                </p>
-              </div>
-              <div
-                style={{ backgroundColor: "var(--accent-light)" }}
-                className="p-4 rounded-lg"
-              >
-                <h4 style={{ color: "var(--accent)" }} className="font-medium">
-                  Channels
-                </h4>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Manage your YouTube channels.
-                </p>
+          <div>
+            <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 mb-6">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+                Welcome, {user?.username}!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300">
+                This is your dashboard overview. Here you can track your content
+                performance, get trending ideas, and manage your YouTube
+                channels.
+              </p>
+              <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div
+                  style={{ backgroundColor: "var(--primary-light)" }}
+                  className="p-4 rounded-lg"
+                >
+                  <h4
+                    style={{ color: "var(--primary)" }}
+                    className="font-medium"
+                  >
+                    Content Ideas
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Discover trending topics for your next content.
+                  </p>
+                </div>
+                <div
+                  style={{ backgroundColor: "var(--success-light)" }}
+                  className="p-4 rounded-lg"
+                >
+                  <h4
+                    style={{ color: "var(--success)" }}
+                    className="font-medium"
+                  >
+                    Performance
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Track how your content is performing.
+                  </p>
+                </div>
+                <div
+                  style={{ backgroundColor: "var(--accent-light)" }}
+                  className="p-4 rounded-lg"
+                >
+                  <h4
+                    style={{ color: "var(--accent)" }}
+                    className="font-medium"
+                  >
+                    Channels
+                  </h4>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Manage your YouTube channels.
+                  </p>
+                </div>
               </div>
             </div>
+
+            {/* Recent Videos Section */}
+            <RecentVideos />
           </div>
         );
       case "analytics":
