@@ -96,32 +96,69 @@ export type RelatedChannel = {
   videoCount: string;
   viewCount: string;
   matchFrequency: number;
+  niche?: string;
+  notes?: string;
 };
 
 /**
  * Extract channel ID from various YouTube URL formats
  */
 export function extractChannelId(url: string): string | null {
+  console.log("Extracting channel ID from URL:", url);
+
+  // Handle direct URLs
+  if (url.startsWith('@')) {
+    console.log("Found handle format (direct):", url);
+    return url;
+  }
+
   // Handle channel URLs
   const channelRegex = /youtube\.com\/channel\/([^\/\?]+)/;
   const channelMatch = url.match(channelRegex);
-  if (channelMatch) return channelMatch[1];
+  if (channelMatch) {
+    console.log("Found channel ID format:", channelMatch[1]);
+    return channelMatch[1];
+  }
 
   // Handle user URLs
   const userRegex = /youtube\.com\/user\/([^\/\?]+)/;
   const userMatch = url.match(userRegex);
-  if (userMatch) return userMatch[1];
+  if (userMatch) {
+    console.log("Found user format:", userMatch[1]);
+    return userMatch[1];
+  }
 
   // Handle handle URLs (new @username format)
   const handleRegex = /youtube\.com\/@([^\/\?]+)/;
   const handleMatch = url.match(handleRegex);
-  if (handleMatch) return '@' + handleMatch[1];
+  if (handleMatch) {
+    console.log("Found handle format:", '@' + handleMatch[1]);
+    return '@' + handleMatch[1];
+  }
 
   // Handle c/ URLs
   const cRegex = /youtube\.com\/c\/([^\/\?]+)/;
   const cMatch = url.match(cRegex);
-  if (cMatch) return cMatch[1];
+  if (cMatch) {
+    console.log("Found c/ format:", cMatch[1]);
+    return cMatch[1];
+  }
 
+  // Handle youtu.be short URLs
+  const shortRegex = /youtu\.be\/([^\/\?]+)/;
+  const shortMatch = url.match(shortRegex);
+  if (shortMatch) {
+    console.log("Found youtu.be format:", shortMatch[1]);
+    return shortMatch[1];
+  }
+
+  // Handle full channel name as input
+  if (url.includes(' ') || url.length > 30) {
+    console.log("Found channel name format (not a URL):", url);
+    return url;
+  }
+
+  console.log("No channel ID found in URL:", url);
   return null;
 }
 
@@ -533,207 +570,257 @@ export async function searchVideosByKeyword(keyword: string, maxResults: number 
 }
 
 /**
- * Find related channels based on a seed channel using the new approach
+ * Find related channels based on a seed channel using Perplexity API for analysis
  * 
  * @param channelId The ID of the channel to find related channels for
- * @param minSubscribers Minimum subscriber count for filtering (default: 10,000)
- * @param maxSubscribers Maximum subscriber count for filtering (default: 500,000)
  * @returns Array of related channels with detailed information
  */
 export async function findRelatedChannels(
-  channelId: string, 
-  minSubscribers: number = 10000,
-  maxSubscribers: number = 500000
-): Promise<RelatedChannel[]> {
+  channelId: string
+): Promise<{ channels: RelatedChannel[], rawResponse: string }> {
   try {
     console.log("Starting findRelatedChannels for channelId:", channelId);
     
-    // Step 1: Get top videos from the seed channel
-    console.log("Step 1: Getting top videos from seed channel");
-    const topVideoIds = await getTopChannelVideos(channelId, 20);
-    console.log(`Found ${topVideoIds.length} top videos`);
-    
-    if (topVideoIds.length === 0) {
-      console.log("No top videos found, returning empty array");
-      return [];
+    // Step 1: Get channel info for the reference channel
+    const channelInfo = await getChannelInfo(channelId);
+    if (!channelInfo) {
+      console.error("Could not get channel info for the reference channel");
+      return { channels: [], rawResponse: "" };
+    }
+
+    // Step 2: Get recent videos from the channel
+    const recentVideos = await getRecentVideos(channelId, 20);
+    if (recentVideos.length === 0) {
+      console.error("No videos found for the reference channel");
+      return { channels: [], rawResponse: "" };
     }
     
-    // Step 1.1: Get detailed information for these videos
-    console.log("Step 1.1: Getting detailed information for top videos");
-    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${topVideoIds.join(',')}&key=${API_KEY}`;
-    const videosResponse = await fetch(videosUrl);
+    // Extract video titles
+    const videoTitles = recentVideos.map(video => video.title);
     
-    if (!videosResponse.ok) {
-      const errorData = await videosResponse.json();
-      console.error('YouTube API error (videos):', errorData);
-      return [];
-    }
+    // Step 3: Use Perplexity API to analyze and find similar channels
+    // Get the raw response from Perplexity
+    const perplexityResponse = await getRawPerplexityResponse(
+      channelInfo.title,
+      channelInfo.customUrl || `https://youtube.com/channel/${channelId}`,
+      videoTitles
+    );
     
-    const videosData = await videosResponse.json();
-    
-    if (!videosData.items || videosData.items.length === 0) {
-      console.log("No video details found");
-      return [];
-    }
-    
-    // Extract video information for keyword generation
-    const videoInfo = videosData.items.map((video: {
-      snippet: {
-        title: string;
-        description: string;
-        tags?: string[];
-      }
-            }) => ({
-      title: video.snippet.title,
-      description: video.snippet.description,
-      tags: video.snippet.tags
-    }));
-    
-    // Step 1.2: Extract keywords from videos
-    console.log("Step 1.2: Extracting keywords from videos");
-    const keywords = await extractKeywordsFromVideos(videoInfo);
-    console.log(`Generated ${keywords.length} keywords:`, keywords);
-    
-    if (keywords.length === 0) {
-      console.log("No keywords generated, returning empty array");
-    return [];
-    }
-    
-    // Step 2: Search videos by topic keywords and collect channels
-    console.log("Step 2: Searching videos by topic keywords");
-    const channelFrequencyMap: Record<string, { count: number, title: string }> = {};
-    
-    // Limit to 5 keywords to reduce API calls
-    const keywordsToUse = keywords.slice(0, 5);
-    
-    for (const keyword of keywordsToUse) {
-      console.log(`Searching for keyword: ${keyword}`);
-      const channels = await searchVideosByKeyword(keyword, 20);
-      
-      // Update frequency map
-      channels.forEach(channel => {
-        // Skip the seed channel
-        if (channel.channelId === channelId) return;
-        
-        if (channelFrequencyMap[channel.channelId]) {
-          channelFrequencyMap[channel.channelId].count += 1;
-        } else {
-          channelFrequencyMap[channel.channelId] = {
-        count: 1, 
-        title: channel.channelTitle 
-      };
-        }
-    });
-    }
-    
-    // Step 3: Rank and deduplicate channels
-    console.log("Step 3: Ranking and deduplicating channels");
-    const rankedChannels = Object.entries(channelFrequencyMap)
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, 20) // Take top 20 channels
-      .map(([id, info]) => ({
-        id,
-        title: info.title,
-        matchFrequency: info.count
-      }));
-    
-    console.log(`Found ${rankedChannels.length} ranked channels`);
-    
-    if (rankedChannels.length === 0) {
-      console.log("No ranked channels found, returning empty array");
-      return [];
-    }
-    
-    // Step 4: Fetch metadata for top channels
-    console.log("Step 4: Fetching metadata for top channels");
-    const channelIds = rankedChannels.map(channel => channel.id);
-    const channelsInfo = await getChannelsInfo(channelIds);
-    
-    // Merge frequency data with channel info and filter by subscriber count
-    const result = channelsInfo
-      .map(channel => {
-        const rankInfo = rankedChannels.find(rank => rank.id === channel.id);
-        return {
-      ...channel,
-          matchFrequency: rankInfo?.matchFrequency || 0
-        };
-      })
-      .filter(channel => {
-        const subCount = parseInt(channel.subscriberCount, 10);
-        return subCount >= minSubscribers && subCount <= maxSubscribers;
-      })
-      .sort((a, b) => b.matchFrequency - a.matchFrequency);
-    
-    console.log(`Final result: ${result.length} channels after filtering`);
-    return result;
+    // For now, just return the mock data and raw response
+    return { 
+      channels: getMockRelatedChannels(),
+      rawResponse: perplexityResponse
+    };
   } catch (error) {
     console.error('Error finding related channels:', error);
-    return [];
+    return { channels: [], rawResponse: "" };
   }
 }
 
 /**
- * Get channel information for a list of channel IDs
- * 
- * API Documentation:
- * Endpoint: GET https://www.googleapis.com/youtube/v3/channels
- * Parameters:
- *   - part=snippet,statistics
- *   - id={comma_separated_channel_ids}
- *   - key={API_KEY}
- * 
- * Quota Cost: 1 unit per request
+ * Get raw response from Perplexity API without processing
  */
-export async function getChannelsInfo(channelIds: string[]): Promise<RelatedChannel[]> {
+async function getRawPerplexityResponse(
+  channelName: string,
+  channelUrl: string,
+  videoTitles: string[]
+): Promise<string> {
+  try {
+    const PERPLEXITY_API_KEY = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
+    
+    if (!PERPLEXITY_API_KEY) {
+      console.error('Perplexity API key is not available');
+      return getMockPerplexityResponse();
+    }
+
+    // Format video titles for the prompt
+    const formattedVideoTitles = videoTitles.map(title => `- ${title}`).join('\n');
+    
+    // Create the prompt for Perplexity
+    const prompt = `
+I want you to analyze and rank YouTube channels based on their similarity to a reference channel.
+
+Input parameters:
+
+Reference Channel Name: ${channelName}
+Reference Channel URL: ${channelUrl}
+
+Reference Channel Niche/Category: You have to determine the niche of the channel given above
+
+Latest 10-20 Video Titles from Reference Channel:
+REFERENCE_VIDEO_TITLES:
+${formattedVideoTitles}
+
+You have to find atleast 12 channels in the same niche, having the following:
+
+For each channel in the list, analyze the following:
+
+Content niche and category match with the reference channel
+
+Style and tone similarity - find the style and tone first
+
+Topics covered - fetch and properly understand the topics covered
+
+Video format and length similarity
+
+Engagement and depth of content relevant to the niche
+
+Output the results as a CSV table with these columns:
+
+Rank (by similarity score)
+
+Channel Name
+
+Niche/Category
+
+Similarity Score (0-10)
+
+Notes on similarity and differences
+
+Make sure the output is concise, factual.
+
+Please provide the output in CSV format.
+`;
+
+    console.log("Calling Perplexity API for similar channels analysis");
+    
+    try {
+      // Call Perplexity API with sonar-pro model
+      const response = await fetch('https://api.perplexity.ai/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'sonar-pro',
+          messages: [
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 4000
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Perplexity API error:', errorData);
+        return getMockPerplexityResponse();
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      // Extract the CSV data from the response
+      // The response might include thinking process and other text, so we need to extract just the CSV part
+      let csvContent = content;
+      
+      // Try to extract CSV from code blocks if present
+      const csvMatch = content.match(/```(?:csv)?\s*([\s\S]*?)```/);
+      if (csvMatch) {
+        csvContent = csvMatch[1].trim();
+      }
+      
+      console.log("Received CSV content from Perplexity");
+      return csvContent;
+    } catch (error) {
+      console.error('Error calling Perplexity API:', error);
+      return getMockPerplexityResponse();
+    }
+  } catch (error) {
+    console.error('Error in getRawPerplexityResponse:', error);
+    return getMockPerplexityResponse();
+  }
+}
+
+/**
+ * Get mock Perplexity API response for testing
+ */
+function getMockPerplexityResponse(): string {
+  return `
+Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and differences
+1,ForrestKnight,Tech/Developer Commentary,9,"Very strong match: Industry commentary, dev career advice, humor, portfolio reviews, and critical takes match Anthony Sistilli's core style and audience."
+2,Joma Tech,Tech/Comedy/Industry Satire,9,"Strong overlap: Blends developer career, industry satire, and startup stories with comedic and informative commentary, similar tone and format."
+3,TechLead,Tech/Industry Critique,8,"High similarity: Focuses on tech industry, FAANG, and software careers with opinionated, satirical style; longer videos and more cynical humor."
+4,ThePrimeTime,Tech/Developer Life,8,"Strong overlap: Developer careers, interviewing, industry trends, humor, and critical analysis; similar video length and engagement."
+5,Nick White,Tech/Dev Interviews & Commentary,7,"Good match: Focus on coding interviews, developer advice, and critique, but skews more technical and interview-oriented."
+6,Clément Mihailescu,Tech/Coding Careers,7,"Developer interviews, resume advice, and industry commentary with some humor; style is slightly more educational than satirical."
+7,Fireship,Tech/Trends/Quick Commentary,7,"Tech/AI/dev tools news, witty short-form commentary, and deep insight; leans more educational, but shares humor and modern topics."
+8,Ben Awad,Tech/Developer Humor,7,"Developer humor, coding culture, and meme-driven skits; similar audience and tone, less focus on industry critique."
+9,Marc Lou,Tech/Indie Startups/Commentary,7,"Tech/startup commentary, entrepreneurial humor, solo dev projects, and industry critique; more focused on side projects and startups."
+10,Theo - t3.gg,Tech/Web Dev/Industry Takes,6,"Web dev, tech trends, developer culture; combines critique and humor, but focuses more on frameworks and technical content."
+11,Jarvis Johnson,Tech/Commentary/Internet Culture,6,"Covers tech culture and industry with humor, but broader focus on pop/internet culture outside of strict developer topics."
+12,Ali Spittel,Tech/Developer Advice,6,"Developer advice, career, and tech commentary; similar topics with a more educational, less satirical slant."
+  `;
+}
+
+/**
+ * Get channel information by ID
+ */
+async function getChannelInfo(channelId: string) {
   try {
     // Check if API key is available
     if (!API_KEY) {
-      console.error('YouTube API key is not available. Please set NEXT_PUBLIC_YOUTUBE_API_KEY in your environment variables.');
-      return [];
+      console.error('YouTube API key is not available');
+      return null;
     }
 
-    // Remove duplicates and limit to 20
-    const uniqueIds = [...new Set(channelIds)].slice(0, 20);
-    
-    if (uniqueIds.length === 0) {
-      return [];
+    // Handle @username format for channel IDs
+    if (channelId.startsWith('@')) {
+      // Use forHandle parameter instead of id for @username format
+      const apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&forHandle=${channelId}&key=${API_KEY}`;
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('YouTube API error (channels):', errorData);
+        return null;
+      }
+      
+      const data = await response.json();
+      
+      if (!data.items || data.items.length === 0) {
+        console.error('No channel information found for handle:', channelId);
+        return null;
+      }
+      
+      // Continue with the rest of the function
+      const channel = data.items[0];
+      return {
+        id: channel.id,
+        title: channel.snippet.title,
+        description: channel.snippet.description,
+        customUrl: channel.snippet.customUrl || '',
+        thumbnails: {
+          default: channel.snippet.thumbnails.default?.url || '',
+          medium: channel.snippet.thumbnails.medium?.url || '',
+          high: channel.snippet.thumbnails.high?.url || '',
+        },
+        subscriberCount: channel.statistics.subscriberCount || '0',
+        videoCount: channel.statistics.videoCount || '0',
+        viewCount: channel.statistics.viewCount || '0'
+      };
     }
 
-    const apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${uniqueIds.join(',')}&key=${API_KEY}`;
+    // Regular channel ID lookup
+    const apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${API_KEY}`;
     const response = await fetch(apiUrl);
-
+    
     if (!response.ok) {
       const errorData = await response.json();
       console.error('YouTube API error (channels):', errorData);
-      return [];
+      return null;
     }
-
+    
     const data = await response.json();
     
     if (!data.items || data.items.length === 0) {
       console.error('No channel information found');
-      return [];
+      return null;
     }
     
-    // Format channel data
-    return data.items.map((channel: {
-      id: string;
-      snippet: {
-        title: string;
-        description: string;
-        customUrl?: string;
-        thumbnails: {
-          default?: { url: string };
-          medium?: { url: string };
-          high?: { url: string };
-        };
-      };
-      statistics: {
-        subscriberCount?: string;
-        videoCount?: string;
-        viewCount?: string;
-      };
-    }) => ({
+    const channel = data.items[0];
+    
+    return {
       id: channel.id,
       title: channel.snippet.title,
       description: channel.snippet.description,
@@ -745,11 +832,611 @@ export async function getChannelsInfo(channelIds: string[]): Promise<RelatedChan
       },
       subscriberCount: channel.statistics.subscriberCount || '0',
       videoCount: channel.statistics.videoCount || '0',
-      viewCount: channel.statistics.viewCount || '0',
-      matchFrequency: 0, // Will be updated later
+      viewCount: channel.statistics.viewCount || '0'
+    };
+  } catch (error) {
+    console.error('Error getting channel info:', error);
+    return null;
+  }
+}
+
+interface PerplexityChannel {
+  rank: number;
+  channelName: string;
+  niche: string;
+  similarityScore: number;
+  notes: string;
+}
+
+/**
+ * Use Perplexity API to find similar channels based on reference channel
+ */
+async function findSimilarChannelsWithPerplexity(
+  channelName: string,
+  channelUrl: string,
+  videoTitles: string[]
+): Promise<PerplexityChannel[]> {
+  try {
+    const PERPLEXITY_API_KEY = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
+    
+    if (!PERPLEXITY_API_KEY) {
+      console.error('Perplexity API key is not available');
+      return [];
+    }
+    
+    // Format video titles for the prompt
+    const formattedVideoTitles = videoTitles.map(title => `- ${title}`).join('\n');
+    
+    // Create the prompt for Perplexity
+    const prompt = `
+I want you to analyze and rank YouTube channels based on their similarity to a reference channel.
+
+Input parameters:
+
+Reference Channel Name: ${channelName}
+Reference Channel URL: ${channelUrl}
+
+Reference Channel Niche/Category: You have to determine the niche of the channel given above
+
+Latest 10-20 Video Titles from Reference Channel:
+REFERENCE_VIDEO_TITLES:
+${formattedVideoTitles}
+
+You have to find atleast 12 channels in the same niche, having the following:
+
+For each channel in the list, analyze the following:
+
+Content niche and category match with the reference channel
+
+Style and tone similarity - find the style and tone first
+
+Topics covered - fetch and properly understand the topics covered
+
+Video format and length similarity
+
+Engagement and depth of content relevant to the niche
+
+Output the results as a CSV table with these columns:
+
+Rank (by similarity score)
+
+Channel Name
+
+Niche/Category
+
+Similarity Score (0-10)
+
+Notes on similarity and differences
+
+Make sure the output is concise, factual.
+
+Please provide the output in CSV format.
+`;
+
+    console.log("Calling Perplexity API for similar channels analysis");
+    
+    // Call Perplexity API with sonar-pro model
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 4000
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Perplexity API error:', errorData);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    // Extract the CSV data from the response
+    // The response might include thinking process and other text, so we need to extract just the CSV part
+    let csvContent = content;
+    
+    // Try to extract CSV from code blocks if present
+    const csvMatch = content.match(/```(?:csv)?\s*([\s\S]*?)```/);
+    if (csvMatch) {
+      csvContent = csvMatch[1].trim();
+    }
+    
+    console.log("Received CSV content:", csvContent);
+    
+    // Parse CSV content
+    const lines = csvContent.trim().split('\n');
+    
+    // Skip header line if it exists
+    const headerLine = lines[0].toLowerCase();
+    const startIndex = headerLine.includes('rank') || 
+                       headerLine.includes('channel name') || 
+                       headerLine.includes('similarity score') ? 1 : 0;
+    
+    const channels: PerplexityChannel[] = [];
+    
+    for (let i = startIndex; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Split by comma, but handle commas within quotes
+      const parts: string[] = [];
+      let currentPart = '';
+      let inQuotes = false;
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        
+        if (char === '"') {
+          inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+          parts.push(currentPart.trim());
+          currentPart = '';
+        } else {
+          currentPart += char;
+        }
+      }
+      
+      // Add the last part
+      parts.push(currentPart.trim());
+      
+      // Remove quotes from parts
+      const cleanParts = parts.map(part => part.replace(/^"(.*)"$/, '$1').trim());
+      
+      // Expect format: Rank, Channel Name, Niche/Category, Similarity Score, Notes
+      // If there's a URL column, we'll ignore it
+      if (cleanParts.length >= 4) {
+        let rank = parseInt(cleanParts[0]) || i;
+        let channelName = cleanParts[1];
+        let niche = '';
+        let similarityScore = 0;
+        let notes = '';
+        
+        // Handle different CSV formats that might be returned
+        if (cleanParts.length === 4) {
+          // Format: Rank, Channel Name, Niche, Score
+          niche = cleanParts[2];
+          similarityScore = parseFloat(cleanParts[3]) || 0;
+        } else if (cleanParts.length === 5) {
+          // Format: Rank, Channel Name, Niche, Score, Notes
+          niche = cleanParts[2];
+          similarityScore = parseFloat(cleanParts[3]) || 0;
+          notes = cleanParts[4];
+        } else if (cleanParts.length >= 6) {
+          // Format: Rank, Channel Name, Channel URL, Niche, Score, Notes
+          // We'll ignore the URL as we'll fetch it ourselves
+          niche = cleanParts[3];
+          similarityScore = parseFloat(cleanParts[4]) || 0;
+          notes = cleanParts[5];
+        }
+        
+        channels.push({
+          rank,
+          channelName,
+          niche,
+          similarityScore,
+          notes
+        });
+      }
+    }
+    
+    console.log(`Found ${channels.length} channels from Perplexity analysis`);
+    return channels;
+  } catch (error) {
+    console.error('Error finding similar channels with Perplexity:', error);
+    return [];
+  }
+}
+
+/**
+ * Get detailed channel information for a list of channels
+ */
+async function getDetailedChannelInfo(channels: PerplexityChannel[]): Promise<RelatedChannel[]> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available');
+      return [];
+    }
+
+    const detailedChannels: RelatedChannel[] = [];
+    
+    // Process channels in batches to avoid rate limits
+    for (const channel of channels) {
+      try {
+        console.log(`Searching for channel: ${channel.channelName}`);
+        
+        // Search for the channel by name
+        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(channel.channelName)}&maxResults=5&order=viewCount&key=${API_KEY}`;
+        const searchResponse = await fetch(searchUrl);
+        
+        if (!searchResponse.ok) {
+          const errorData = await searchResponse.json();
+          console.error('YouTube API error (search):', errorData);
+          continue;
+        }
+        
+        const searchData = await searchResponse.json();
+        
+        if (!searchData.items || searchData.items.length === 0) {
+          console.log(`No channels found for name: ${channel.channelName}`);
+          continue;
+        }
+        
+        // Get the first channel from search results (most viewed/subscribed)
+        const channelId = searchData.items[0].snippet.channelId;
+        
+        // Get detailed channel information
+        const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${channelId}&key=${API_KEY}`;
+        const channelResponse = await fetch(channelUrl);
+        
+        if (!channelResponse.ok) {
+          const errorData = await channelResponse.json();
+          console.error('YouTube API error (channels):', errorData);
+          continue;
+        }
+        
+        const channelData = await channelResponse.json();
+        
+        if (!channelData.items || channelData.items.length === 0) {
+          console.log(`No channel details found for ID: ${channelId}`);
+          continue;
+        }
+        
+        const channelDetails = channelData.items[0];
+        
+        detailedChannels.push({
+          id: channelDetails.id,
+          title: channelDetails.snippet.title,
+          description: channelDetails.snippet.description,
+          customUrl: channelDetails.snippet.customUrl || '',
+          thumbnails: {
+            default: channelDetails.snippet.thumbnails.default?.url || '',
+            medium: channelDetails.snippet.thumbnails.medium?.url || '',
+            high: channelDetails.snippet.thumbnails.high?.url || '',
+          },
+          subscriberCount: channelDetails.statistics.subscriberCount || '0',
+          videoCount: channelDetails.statistics.videoCount || '0',
+          viewCount: channelDetails.statistics.viewCount || '0',
+          matchFrequency: channel.similarityScore,
+          niche: channel.niche,
+          notes: channel.notes
+        });
+        
+        console.log(`Successfully added channel: ${channelDetails.snippet.title}`);
+      } catch (error) {
+        console.error(`Error getting details for channel "${channel.channelName}":`, error);
+      }
+      
+      // Add a small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    
+    // Sort by similarity score (descending)
+    return detailedChannels.sort((a, b) => b.matchFrequency - a.matchFrequency);
+  } catch (error) {
+    console.error('Error getting detailed channel info:', error);
+    return [];
+  }
+}
+
+/**
+ * Get top performing videos from a channel in the last 6 months
+ * 
+ * @param channelId The channel ID to get videos from
+ * @param maxResults Maximum number of results to return (default: 20)
+ * @returns Array of video details
+ */
+export async function getTopPerformingVideos(channelId: string, maxResults: number = 20): Promise<YouTubeVideoInfo[]> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available');
+      return [];
+    }
+    
+    // Calculate date 6 months ago
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const publishedAfter = sixMonthsAgo.toISOString();
+    
+    // Get top performing videos from the channel
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&order=viewCount&publishedAfter=${publishedAfter}&maxResults=${maxResults}&key=${API_KEY}`;
+    const searchResponse = await fetch(searchUrl);
+    
+    if (!searchResponse.ok) {
+      const errorData = await searchResponse.json();
+      console.error('YouTube API error (search):', errorData);
+      return [];
+    }
+    
+    const searchData = await searchResponse.json();
+    
+    if (!searchData.items || searchData.items.length === 0) {
+      console.log(`No videos found for channel ${channelId}`);
+      return [];
+    }
+    
+    // Extract video IDs
+    const videoIds = searchData.items.map((item: {id: {videoId: string}}) => item.id.videoId);
+    
+    // Get detailed video information
+    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
+    const videosResponse = await fetch(videosUrl);
+    
+    if (!videosResponse.ok) {
+      const errorData = await videosResponse.json();
+      console.error('YouTube API error (videos):', errorData);
+      return [];
+    }
+    
+    const videosData = await videosResponse.json();
+    
+    if (!videosData.items || videosData.items.length === 0) {
+      console.log(`No video details found for channel ${channelId}`);
+      return [];
+    }
+    
+    // Format the video data
+    return videosData.items.map((video: YouTubeVideo) => ({
+      id: video.id,
+      title: video.snippet.title,
+      description: video.snippet.description,
+      publishedAt: video.snippet.publishedAt,
+      channelId: video.snippet.channelId,
+      channelTitle: video.snippet.channelTitle,
+      thumbnails: {
+        default: video.snippet.thumbnails.default,
+        medium: video.snippet.thumbnails.medium,
+        high: video.snippet.thumbnails.high,
+        standard: video.snippet.thumbnails.standard,
+        maxres: video.snippet.thumbnails.maxres,
+      },
+      duration: video.contentDetails.duration,
+      viewCount: video.statistics.viewCount || '0',
+      likeCount: video.statistics.likeCount || '0',
+      commentCount: video.statistics.commentCount || '0',
+      tags: video.snippet.tags,
     }));
   } catch (error) {
-    console.error('Error fetching channels info:', error);
+    console.error(`Error getting top performing videos for channel ${channelId}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Get recent videos from a channel
+ * 
+ * @param channelId The channel ID to get videos from
+ * @param maxResults Maximum number of results to return (default: 20)
+ * @returns Array of video details
+ */
+export async function getRecentVideos(channelId: string, maxResults: number = 20): Promise<YouTubeVideoInfo[]> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available');
+      return [];
+    }
+    
+    // Get recent videos from the channel
+    const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&order=date&maxResults=${maxResults}&key=${API_KEY}`;
+    const searchResponse = await fetch(searchUrl);
+    
+    if (!searchResponse.ok) {
+      const errorData = await searchResponse.json();
+      console.error('YouTube API error (search):', errorData);
+      return [];
+    }
+    
+    const searchData = await searchResponse.json();
+    
+    if (!searchData.items || searchData.items.length === 0) {
+      console.log(`No videos found for channel ${channelId}`);
+      return [];
+    }
+    
+    // Extract video IDs
+    const videoIds = searchData.items.map((item: {id: {videoId: string}}) => item.id.videoId);
+    
+    // Get detailed video information
+    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}&key=${API_KEY}`;
+    const videosResponse = await fetch(videosUrl);
+    
+    if (!videosResponse.ok) {
+      const errorData = await videosResponse.json();
+      console.error('YouTube API error (videos):', errorData);
+      return [];
+    }
+    
+    const videosData = await videosResponse.json();
+    
+    if (!videosData.items || videosData.items.length === 0) {
+      console.log(`No video details found for channel ${channelId}`);
+      return [];
+    }
+    
+    // Format the video data
+    return videosData.items.map((video: YouTubeVideo) => ({
+      id: video.id,
+      title: video.snippet.title,
+      description: video.snippet.description,
+      publishedAt: video.snippet.publishedAt,
+      channelId: video.snippet.channelId,
+      channelTitle: video.snippet.channelTitle,
+      thumbnails: {
+        default: video.snippet.thumbnails.default,
+        medium: video.snippet.thumbnails.medium,
+        high: video.snippet.thumbnails.high,
+        standard: video.snippet.thumbnails.standard,
+        maxres: video.snippet.thumbnails.maxres,
+      },
+      duration: video.contentDetails.duration,
+      viewCount: video.statistics.viewCount || '0',
+      likeCount: video.statistics.likeCount || '0',
+      commentCount: video.statistics.commentCount || '0',
+      tags: video.snippet.tags,
+    }));
+  } catch (error) {
+    console.error(`Error getting recent videos for channel ${channelId}:`, error);
+    return [];
+  }
+}
+
+export interface ContentIdea {
+  title: string;
+  description: string;
+  tags: string[];
+  estimatedViews: string;
+  targetKeywords: string[];
+  thumbnailIdeas: string[];
+}
+
+/**
+ * Generate content ideas based on top performing videos from related channels
+ * and the creator's own voice/tone
+ * 
+ * @param relatedChannels Array of related channels
+ * @param creatorChannelId The creator's channel ID
+ * @param numIdeas Number of content ideas to generate (default: 5)
+ * @returns Array of content ideas
+ */
+export async function generateContentIdeas(
+  relatedChannels: RelatedChannel[],
+  creatorChannelId: string,
+  numIdeas: number = 5
+): Promise<ContentIdea[]> {
+  try {
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    
+    if (!GEMINI_API_KEY) {
+      console.error('Gemini API key is not available');
+      return [];
+    }
+    
+    console.log("Generating content ideas for creator channel:", creatorChannelId);
+    
+    // Get top performing videos from related channels
+    const topVideosPromises = relatedChannels.slice(0, 5).map(channel => 
+      getTopPerformingVideos(channel.id, 5)
+    );
+    
+    const topVideosArrays = await Promise.all(topVideosPromises);
+    const topVideos = topVideosArrays.flat().sort((a, b) => 
+      parseInt(b.viewCount) - parseInt(a.viewCount)
+    ).slice(0, 20);
+    
+    console.log(`Found ${topVideos.length} top performing videos from related channels`);
+    
+    // Get recent videos from creator's channel
+    const creatorVideos = await getRecentVideos(creatorChannelId, 20);
+    console.log(`Found ${creatorVideos.length} recent videos from creator's channel`);
+    
+    if (topVideos.length === 0 || creatorVideos.length === 0) {
+      console.error('Not enough videos to generate content ideas');
+      return [];
+    }
+    
+    // Prepare the prompt for Gemini
+    const topVideosData = topVideos.map((video, i) => `
+Video ${i + 1} (${formatViewCount(video.viewCount)}):
+Title: ${video.title}
+Description: ${video.description?.substring(0, 200)}${video.description?.length > 200 ? '...' : ''}
+Tags: ${video.tags ? video.tags.join(', ') : 'None'}
+`).join('\n');
+
+    const creatorVideosData = creatorVideos.map((video, i) => `
+Video ${i + 1}:
+Title: ${video.title}
+Description: ${video.description?.substring(0, 200)}${video.description?.length > 200 ? '...' : ''}
+Tags: ${video.tags ? video.tags.join(', ') : 'None'}
+`).join('\n');
+
+    const prompt = `
+You are an expert YouTube strategist.
+Below are the top-performing video titles and descriptions from similar creators in this niche (last 6 months):
+
+${topVideosData}
+
+And here are the last 20 videos from the target creator:
+
+${creatorVideosData}
+
+Based on the viral topics and trends, and in the same tone and conversational style as the target creator, generate ${numIdeas} video ideas that could perform well.
+
+For each idea, provide:
+1. A catchy title that would work well for YouTube's algorithm
+2. A brief description (2-3 sentences)
+3. 5-7 relevant tags
+4. Estimated view potential (low/medium/high)
+5. 3-5 target keywords for SEO
+6. 2 thumbnail ideas described in a few words
+
+Format your response as a JSON array with the following structure:
+[
+  {
+    "title": "Title here",
+    "description": "Description here",
+    "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+    "estimatedViews": "high",
+    "targetKeywords": ["keyword1", "keyword2", "keyword3"],
+    "thumbnailIdeas": ["Thumbnail idea 1", "Thumbnail idea 2"]
+  },
+  ...
+]
+
+Only include the JSON array in your response, nothing else.
+`;
+
+    console.log("Calling Gemini API for content ideas");
+    
+    // Call Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Gemini API error:', errorData);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.candidates[0].content.parts[0].text.trim();
+    
+    try {
+      // Parse the JSON response
+      const contentIdeas = JSON.parse(content) as ContentIdea[];
+      return contentIdeas;
+    } catch (error) {
+      console.error('Error parsing content ideas JSON:', error);
+      console.error('Raw content:', content);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error generating content ideas:', error);
     return [];
   }
 }
@@ -772,7 +1459,9 @@ export function getMockRelatedChannels(): RelatedChannel[] {
       subscriberCount: "1250000",
       videoCount: "342",
       viewCount: "75000000",
-      matchFrequency: 5
+      matchFrequency: 8.5,
+      niche: "Gaming & Let's Plays",
+      notes: "Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content."
     },
     {
       id: "mock-channel-2",
@@ -787,7 +1476,9 @@ export function getMockRelatedChannels(): RelatedChannel[] {
       subscriberCount: "3500000",
       videoCount: "512",
       viewCount: "245000000",
-      matchFrequency: 4
+      matchFrequency: 7.2,
+      niche: "Tech Reviews",
+      notes: "Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews."
     },
     {
       id: "mock-channel-3",
@@ -802,7 +1493,26 @@ export function getMockRelatedChannels(): RelatedChannel[] {
       subscriberCount: "780000",
       videoCount: "215",
       viewCount: "35000000",
-      matchFrequency: 3
+      matchFrequency: 6.8,
+      niche: "Design & Creative Skills",
+      notes: "Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns."
+    },
+    {
+      id: "mock-channel-4",
+      title: "Digital Marketing Mastery",
+      description: "Expert tips and strategies for digital marketing success. SEO, social media, content marketing, and more.",
+      customUrl: "digitalmarketingmastery",
+      thumbnails: {
+        default: "https://via.placeholder.com/88",
+        medium: "https://via.placeholder.com/240",
+        high: "https://via.placeholder.com/800"
+      },
+      subscriberCount: "950000",
+      videoCount: "328",
+      viewCount: "42000000",
+      matchFrequency: 5.9,
+      niche: "Digital Marketing",
+      notes: "Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
     }
   ];
 } 

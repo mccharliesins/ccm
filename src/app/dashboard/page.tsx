@@ -65,6 +65,13 @@ export default function Dashboard() {
     }
   }, [authLoading, user, router]);
 
+  // Redirect to content-ideas page when ideas tab is clicked
+  useEffect(() => {
+    if (activeTab === "ideas") {
+      router.push("/content-ideas");
+    }
+  }, [activeTab, router]);
+
   if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[80vh]">
@@ -96,9 +103,10 @@ export default function Dashboard() {
                 channels.
               </p>
               <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div
+                <Link
+                  href="/content-ideas"
                   style={{ backgroundColor: "var(--primary-light)" }}
-                  className="p-4 rounded-lg"
+                  className="p-4 rounded-lg hover:opacity-90 transition-opacity"
                 >
                   <h4
                     style={{ color: "var(--primary)" }}
@@ -109,7 +117,7 @@ export default function Dashboard() {
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Discover trending topics for your next content.
                   </p>
-                </div>
+                </Link>
                 <div
                   style={{ backgroundColor: "var(--success-light)" }}
                   className="p-4 rounded-lg"
@@ -147,23 +155,6 @@ export default function Dashboard() {
         );
       case "related-channels":
         return <RelatedChannels />;
-      case "ideas":
-        return (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-              Content Ideas
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              Discover trending topics and content ideas for your channel. This
-              feature will be available soon.
-            </p>
-            <div className="mt-6 p-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                Trending ideas will appear here
-              </p>
-            </div>
-          </div>
-        );
       default:
         return null;
     }
@@ -234,13 +225,9 @@ export default function Dashboard() {
           >
             Related Channels
           </button>
-          <button
-            onClick={() => setActiveTab("ideas")}
-            className={`${
-              activeTab === "ideas"
-                ? "border-primary text-primary"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+          <Link
+            href="/content-ideas"
+            className={`border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
             style={
               {
                 "--border-primary": "var(--primary)",
@@ -249,7 +236,7 @@ export default function Dashboard() {
             }
           >
             Content Ideas
-          </button>
+          </Link>
         </nav>
       </div>
 

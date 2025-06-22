@@ -4,6 +4,7 @@
   --background: #ffffff;
   --foreground: #171717;
   --primary: #1d4ed8; /* Blue-700 */
+  --primary-rgb: 29, 78, 216; /* RGB values for Blue-700 */
   --primary-hover: #1e40af; /* Blue-800 */
   --primary-light: #dbeafe; /* Blue-50 */
   --primary-text: #1d4ed8; /* Blue-700 */

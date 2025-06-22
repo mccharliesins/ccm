@@ -36,15 +36,34 @@ export default function Settings() {
       const updatedChannels = [...storedChannels];
       let hasUpdates = false;
 
+      console.log(
+        "Fetching missing channel info for",
+        updatedChannels.length,
+        "channels"
+      );
+
       for (let i = 0; i < updatedChannels.length; i++) {
         if (!updatedChannels[i].channelInfo) {
           try {
+            console.log(
+              `Fetching info for channel ${i + 1}:`,
+              updatedChannels[i].url
+            );
             const channelInfo = await fetchChannelInfo(updatedChannels[i].url);
+
             if (channelInfo) {
+              console.log(
+                "Successfully fetched channel info:",
+                channelInfo.title
+              );
               updatedChannels[i] =
                 updateChannel(updatedChannels[i].id, { channelInfo }) ||
                 updatedChannels[i];
               hasUpdates = true;
+            } else {
+              console.error(
+                `No channel info returned for ${updatedChannels[i].url}`
+              );
             }
           } catch (err) {
             console.error(
@@ -52,10 +71,16 @@ export default function Settings() {
               err
             );
           }
+        } else {
+          console.log(
+            `Channel ${i + 1} already has info:`,
+            updatedChannels[i].channelInfo?.title
+          );
         }
       }
 
       if (hasUpdates) {
+        console.log("Updating channels with new info");
         setChannels(updatedChannels);
       }
       setIsLoading(false);

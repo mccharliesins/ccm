@@ -73,6 +73,15 @@ export default function Header() {
             >
               Dashboard
             </Link>
+            <Link
+              href="/content-ideas"
+              className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100"
+              style={
+                { "--text-primary": "var(--primary)" } as React.CSSProperties
+              }
+            >
+              Content Ideas
+            </Link>
             {user ? (
               <>
                 <Link
@@ -154,6 +163,16 @@ export default function Header() {
                 onClick={() => setIsMenuOpen(false)}
               >
                 Dashboard
+              </Link>
+              <Link
+                href="/content-ideas"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100 py-2"
+                style={
+                  { "--text-primary": "var(--primary)" } as React.CSSProperties
+                }
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Content Ideas
               </Link>
               {user ? (
                 <>
