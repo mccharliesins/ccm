@@ -230,7 +230,7 @@ export async function fetchChannelInfo(url: string): Promise<YouTubeChannelInfo 
  * Parameters:
  *   - part=snippet,contentDetails
  *   - playlistId={uploadsPlaylistId}
- *   - maxResults=50
+ *   - maxResults=20
  *   - key={API_KEY}
  * 
  * Step 2: GET https://www.googleapis.com/youtube/v3/videos
@@ -250,7 +250,7 @@ export async function fetchChannelVideos(uploadsPlaylistId: string): Promise<You
     }
 
     // Step 1: Get video IDs from the uploads playlist
-    const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=50&key=${API_KEY}`;
+    const playlistUrl = `https://www.googleapis.com/youtube/v3/playlistItems?part=snippet,contentDetails&playlistId=${uploadsPlaylistId}&maxResults=20&key=${API_KEY}`;
     const playlistResponse = await fetch(playlistUrl);
     
     if (!playlistResponse.ok) {
@@ -688,8 +688,8 @@ export async function getChannelsInfo(channelIds: string[]): Promise<RelatedChan
       return [];
     }
 
-    // Remove duplicates and limit to 50 (API limit)
-    const uniqueIds = [...new Set(channelIds)].slice(0, 50);
+    // Remove duplicates and limit to 20
+    const uniqueIds = [...new Set(channelIds)].slice(0, 20);
     
     if (uniqueIds.length === 0) {
       return [];

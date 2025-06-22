@@ -177,8 +177,8 @@ export default function RecentVideos() {
       result.sort((a, b) => parseInt(b.viewCount) - parseInt(a.viewCount));
     }
 
-    // Limit to 50 videos
-    setFilteredVideos(result.slice(0, 50));
+    // Limit to 20 videos
+    setFilteredVideos(result.slice(0, 20));
   }, [videos, sortBy, filterBy, dateRange, customStartDate, getStartDate]);
 
   // Handle date range change
@@ -232,7 +232,7 @@ export default function RecentVideos() {
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
         <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 md:mb-0">
-          Last 50 Uploads
+          Last 20 Uploads
         </h3>
 
         {/* Mobile Filter Toggle Button */}
