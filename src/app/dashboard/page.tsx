@@ -80,7 +80,7 @@ export default function Dashboard() {
   if (!user) {
     return null;
   }
-
+  //Rendering...
   const renderTabContent = () => {
     switch (activeTab) {
       case "overview":
