@@ -107,19 +107,19 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <div className="mb-8">
-        <h1 className="text-4xl tracking-tight font-extrabold text-gray-900 dark:text-gray-100">
+        <h1 className="text-4xl tracking-tight font-extrabold text-gray-900">
           Dashboard
         </h1>
-        <p className="mt-2 text-xl text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-xl text-gray-500">
           Manage your content and discover trending ideas
         </p>
       </div>
 
       {/* YouTube Channels Bar */}
       {channels.length > 0 && (
-        <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+        <div className="mb-6 bg-white rounded-lg p-5 border border-gray-100 shadow-sm">
           <div className="flex justify-between items-center mb-3">
-            <h2 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <h2 className="text-sm font-medium text-gray-700">
               Your YouTube Channels
             </h2>
             <Link
@@ -134,14 +134,14 @@ export default function Dashboard() {
       )}
 
       {/* Dashboard Tabs */}
-      <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="mb-6 border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           <button
             onClick={() => setActiveTab("overview")}
             className={`${
               activeTab === "overview"
                 ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Overview
@@ -151,14 +151,14 @@ export default function Dashboard() {
             className={`${
               activeTab === "related-channels"
                 ? "border-orange-500 text-orange-600"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors`}
           >
             Related Channels
           </button>
           <Link
             href="/content-ideas"
-            className="border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
+            className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors"
           >
             Content Ideas
           </Link>
@@ -166,9 +166,7 @@ export default function Dashboard() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        {renderTabContent()}
-      </div>
+      <div className="bg-white rounded-lg shadow-sm">{renderTabContent()}</div>
     </div>
   );
 }
