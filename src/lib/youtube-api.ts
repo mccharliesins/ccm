@@ -1,5 +1,6 @@
-// YouTube API key - in a real app, this should be in an environment variable
-const API_KEY = 'YOUR_API_KEY'; // Replace with your actual API key
+// Get YouTube API key from environment variables
+// In Next.js, client-side code can only access environment variables prefixed with NEXT_PUBLIC_
+const API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
 
 export type YouTubeChannelInfo = {
   id: string;
@@ -65,6 +66,12 @@ export function getIdentifierType(identifier: string): 'id' | 'handle' | 'userna
  */
 export async function fetchChannelInfo(url: string): Promise<YouTubeChannelInfo | null> {
   try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available. Please set NEXT_PUBLIC_YOUTUBE_API_KEY in your environment variables.');
+      return null;
+    }
+
     let identifier = extractChannelId(url);
     if (!identifier) return null;
     

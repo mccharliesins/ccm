@@ -1,4 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Creator Climb
+
+A Next.js application to help creators focus and get trending ideas.
+
+## Features
+
+- User authentication with local storage
+- YouTube channel management
+- Dashboard with analytics and content ideas
+- Responsive design
+
+## Setup
+
+1. Clone the repository
+
+   ```bash
+   git clone https://github.com/mccharliesins/ccm.git
+   cd ccm
+   ```
+
+2. Install dependencies
+
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables
+   Create a `.env.local` file in the root directory with the following content:
+
+   ```
+   NEXT_PUBLIC_YOUTUBE_API_KEY=YOUR_API_KEY
+   ```
+
+   Replace `YOUR_API_KEY` with your actual YouTube Data API key. You can obtain one from the [Google Cloud Console](https://console.cloud.google.com/).
+
+4. Run the development server
+
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Environment Variables
+
+- `NEXT_PUBLIC_YOUTUBE_API_KEY`: YouTube Data API key for fetching channel information
+
+## Deployment
+
+This project is ready to be deployed on Vercel. Simply connect your GitHub repository to Vercel and it will be automatically deployed.
+
+## Built With
+
+- [Next.js](https://nextjs.org/) - React framework
+- [TypeScript](https://www.typescriptlang.org/) - Type-safe JavaScript
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+- [YouTube Data API](https://developers.google.com/youtube/v3) - For fetching channel information
 
 ## Getting Started
 
