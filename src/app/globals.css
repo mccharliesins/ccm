@@ -39,6 +39,44 @@ body {
   font-family: 'Outfit', sans-serif;
 }
 
+/* Particle animation */
+@keyframes float {
+  0% {
+    transform: translateY(0) translateX(0);
+  }
+  25% {
+    transform: translateY(-20px) translateX(10px);
+  }
+  50% {
+    transform: translateY(-35px) translateX(-5px);
+  }
+  75% {
+    transform: translateY(-50px) translateX(10px);
+  }
+  100% {
+    transform: translateY(-100px) translateX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.particles-container {
+  z-index: 0;
+}
+
+.particle {
+  position: absolute;
+  will-change: transform, opacity;
+}
+
 /* Markdown content styling */
 .markdown-content {
   font-family: 'Outfit', sans-serif;
