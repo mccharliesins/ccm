@@ -1583,10 +1583,10 @@ export async function generateEnhancedContentIdeas(
   similarChannelIds: string[]
 ): Promise<EnhancedContentIdea[]> {
   try {
-    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    const PERPLEXITY_API_KEY = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
     
-    if (!GEMINI_API_KEY) {
-      console.error('Gemini API key is not available');
+    if (!PERPLEXITY_API_KEY) {
+      console.error('Perplexity API key is not available');
       return [];
     }
     
@@ -1628,7 +1628,7 @@ export async function generateEnhancedContentIdeas(
       });
     }
     
-    // Prepare the prompt for Gemini
+    // Prepare the prompt for Perplexity
     let prompt = `
 I want you to generate 10 high-potential video content ideas for a reference YouTube channel by deeply analyzing both the reference channel's recent content and the best-performing videos of its competitor channels.
 
@@ -1684,39 +1684,36 @@ Example:
 Make sure the tone is consistent with the reference channel's style. Only include the CSV data in your response, nothing else.
 `;
 
-    console.log("Calling Gemini API for enhanced content ideas");
+    console.log("Calling Perplexity API for enhanced content ideas");
     
-    // Call Gemini API
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    // Call Perplexity API
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
       method: 'POST',
       headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ]
+        model: 'sonar-pro',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 4000
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Gemini API error:', errorData);
+      console.error('Perplexity API error:', errorData);
       return [];
     }
 
     const data = await response.json();
-    const content = data.candidates[0].content.parts[0].text.trim();
+    const content = data.choices[0].message.content;
     
     try {
       // Parse the CSV response
-      const lines = content.split('\n').filter(line => line.trim());
+      const lines = content.split('\n').filter((line: string) => line.trim());
       
       // Skip header line if present
       const startIndex = lines[0].toLowerCase().includes('title') ? 1 : 0;
