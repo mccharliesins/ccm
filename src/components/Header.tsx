@@ -9,7 +9,7 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="bg-gray-800 shadow-md border-b border-orange-500">
+    <header className="bg-orange-500 shadow-md border-b border-orange-500">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
@@ -18,7 +18,7 @@ export default function Header() {
               className="text-xl font-bold text-white flex items-center"
             >
               <svg
-                className="h-6 w-6 text-orange-500 mr-2"
+                className="h-6 w-6 text-white mr-2"
                 fill="currentColor"
                 viewBox="0 0 24 24"
               >
