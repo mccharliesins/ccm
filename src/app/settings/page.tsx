@@ -23,54 +23,53 @@ export default function Settings() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Redirect to login if not authenticated
-  if (!authLoading && !user) {
-    router.push("/login");
-    return null;
-  }
-
   // Load channels on mount
   useEffect(() => {
-    if (user) {
-      const storedChannels = getChannels();
-      setChannels(storedChannels);
+    if (!user) return;
 
-      // Fetch channel info for channels that don't have it
-      const fetchMissingChannelInfo = async () => {
-        setIsLoading(true);
-        const updatedChannels = [...storedChannels];
-        let hasUpdates = false;
+    const storedChannels = getChannels();
+    setChannels(storedChannels);
 
-        for (let i = 0; i < updatedChannels.length; i++) {
-          if (!updatedChannels[i].channelInfo) {
-            try {
-              const channelInfo = await fetchChannelInfo(
-                updatedChannels[i].url
-              );
-              if (channelInfo) {
-                updatedChannels[i] =
-                  updateChannel(updatedChannels[i].id, { channelInfo }) ||
-                  updatedChannels[i];
-                hasUpdates = true;
-              }
-            } catch (err) {
-              console.error(
-                `Error fetching info for channel ${updatedChannels[i].url}:`,
-                err
-              );
+    // Fetch channel info for channels that don't have it
+    const fetchMissingChannelInfo = async () => {
+      setIsLoading(true);
+      const updatedChannels = [...storedChannels];
+      let hasUpdates = false;
+
+      for (let i = 0; i < updatedChannels.length; i++) {
+        if (!updatedChannels[i].channelInfo) {
+          try {
+            const channelInfo = await fetchChannelInfo(updatedChannels[i].url);
+            if (channelInfo) {
+              updatedChannels[i] =
+                updateChannel(updatedChannels[i].id, { channelInfo }) ||
+                updatedChannels[i];
+              hasUpdates = true;
             }
+          } catch (err) {
+            console.error(
+              `Error fetching info for channel ${updatedChannels[i].url}:`,
+              err
+            );
           }
         }
+      }
 
-        if (hasUpdates) {
-          setChannels(updatedChannels);
-        }
-        setIsLoading(false);
-      };
+      if (hasUpdates) {
+        setChannels(updatedChannels);
+      }
+      setIsLoading(false);
+    };
 
-      fetchMissingChannelInfo();
-    }
+    fetchMissingChannelInfo();
   }, [user]);
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push("/login");
+    }
+  }, [authLoading, user, router]);
 
   const handleAddChannel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,8 +106,10 @@ export default function Settings() {
       setChannels([...channels, newChannel]);
       setYoutubeUrl("");
       setSuccess("YouTube channel added successfully");
-    } catch (err: any) {
-      setError(err.message || "An error occurred");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error ? err.message : "An error occurred";
+      setError(errorMessage);
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -132,6 +133,11 @@ export default function Settings() {
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
       </div>
     );
+  }
+
+  // If not authenticated and not loading, don't render the settings content
+  if (!user) {
+    return null;
   }
 
   return (

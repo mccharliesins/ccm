@@ -16,6 +16,11 @@ export type User = {
   email: string;
 };
 
+// Define user with password for internal use
+interface UserWithPassword extends User {
+  password: string;
+}
+
 // Define auth context type
 type AuthContextType = {
   user: User | null;
@@ -62,16 +67,16 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const login = async (email: string, password: string): Promise<boolean> => {
     // Get users from local storage
     const usersJson = localStorage.getItem("users") || "[]";
-    const users = JSON.parse(usersJson);
+    const users = JSON.parse(usersJson) as UserWithPassword[];
 
     // Find user with matching email and password
     const foundUser = users.find(
-      (u: any) => u.email === email && u.password === password
+      (u) => u.email === email && u.password === password
     );
 
     if (foundUser) {
       // Create user object without password
-      const { password, ...userWithoutPassword } = foundUser;
+      const { password: _password, ...userWithoutPassword } = foundUser;
 
       // Save to state and local storage
       setUser(userWithoutPassword);
@@ -90,15 +95,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   ): Promise<boolean> => {
     // Get existing users
     const usersJson = localStorage.getItem("users") || "[]";
-    const users = JSON.parse(usersJson);
+    const users = JSON.parse(usersJson) as UserWithPassword[];
 
     // Check if email already exists
-    if (users.some((u: any) => u.email === email)) {
+    if (users.some((u) => u.email === email)) {
       return false;
     }
 
     // Create new user
-    const newUser = {
+    const newUser: UserWithPassword = {
       id: Date.now().toString(),
       username,
       email,
@@ -110,7 +115,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.setItem("users", JSON.stringify(users));
 
     // Login the user (without password in state)
-    const { password: _, ...userWithoutPassword } = newUser;
+    const { password: _omitted, ...userWithoutPassword } = newUser;
     setUser(userWithoutPassword);
     localStorage.setItem("user", JSON.stringify(userWithoutPassword));
 
