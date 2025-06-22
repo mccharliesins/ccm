@@ -5,7 +5,6 @@ import ReactMarkdown from "react-markdown";
 import {
   RelatedChannel,
   ContentIdea,
-  generateContentIdeas,
   EnhancedContentIdea,
   generateEnhancedContentIdeas,
   generateVideoScript,
@@ -21,12 +20,9 @@ export default function ContentIdeas() {
   const [userChannels, setUserChannels] = useState<
     { id: string; title: string }[]
   >([]);
-  const [relatedChannels, setRelatedChannels] = useState<RelatedChannel[]>([]);
-  const [numIdeas, setNumIdeas] = useState(5);
-  const [generatingScriptFor, setGeneratingScriptFor] = useState<number | null>(
-    null
-  );
   const [scripts, setScripts] = useState<Record<number, string>>({});
+  const [generatingScript, setGeneratingScript] = useState<number | null>(null);
+  const [relatedChannels, setRelatedChannels] = useState<RelatedChannel[]>([]);
 
   // Load user channels
   useEffect(() => {
@@ -112,7 +108,7 @@ export default function ContentIdeas() {
   // Function to generate a script for a specific idea
   const handleGenerateScript = async (index: number, isEnhanced: boolean) => {
     try {
-      setGeneratingScriptFor(index);
+      setGeneratingScript(index);
 
       // Get the selected channel info
       const selectedChannel = userChannels.find(
@@ -146,7 +142,7 @@ export default function ContentIdeas() {
       console.error("Error generating script:", error);
       setError("Failed to generate script. Please try again later.");
     } finally {
-      setGeneratingScriptFor(null);
+      setGeneratingScript(null);
     }
   };
 
@@ -304,14 +300,14 @@ export default function ContentIdeas() {
                 <div className="mt-4">
                   <button
                     onClick={() => handleGenerateScript(index, true)}
-                    disabled={generatingScriptFor === index}
+                    disabled={generatingScript === index}
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                      generatingScriptFor === index
+                      generatingScript === index
                         ? "bg-gray-400 cursor-not-allowed"
                         : "bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     }`}
                   >
-                    {generatingScriptFor === index ? (
+                    {generatingScript === index ? (
                       <>
                         <svg
                           className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -449,14 +445,14 @@ export default function ContentIdeas() {
                 <div className="mt-4">
                   <button
                     onClick={() => handleGenerateScript(index, false)}
-                    disabled={generatingScriptFor === index}
+                    disabled={generatingScript === index}
                     className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
-                      generatingScriptFor === index
+                      generatingScript === index
                         ? "bg-gray-400 cursor-not-allowed"
                         : "bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                     }`}
                   >
-                    {generatingScriptFor === index ? (
+                    {generatingScript === index ? (
                       <>
                         <svg
                           className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"

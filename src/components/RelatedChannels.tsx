@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   RelatedChannel,
   findRelatedChannels,
   getMockRelatedChannels,
-  formatViewCount,
 } from "@/lib/youtube-api";
 import { getChannels } from "@/lib/youtube";
 
@@ -36,7 +34,6 @@ export default function RelatedChannels() {
   const [userChannels, setUserChannels] = useState<
     { id: string; title: string }[]
   >([]);
-  const [debugInfo, setDebugInfo] = useState<string>("");
   const [useMockData, setUseMockData] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
   const [rawResponse, setRawResponse] = useState<string>("");
@@ -55,37 +52,8 @@ export default function RelatedChannels() {
     accent: "139, 92, 246", // violet-500
   };
 
-  // Load user channels
-  useEffect(() => {
-    const channels = getChannels();
-    console.log("Available channels:", channels);
-
-    const channelOptions = channels
-      .filter((channel) => channel.channelInfo?.id)
-      .map((channel) => ({
-        id: channel.channelInfo!.id,
-        title: channel.channelInfo!.title,
-      }));
-
-    console.log("Channel options:", channelOptions);
-    setUserChannels(channelOptions);
-
-    // Auto-select first channel if available
-    if (channelOptions.length > 0 && !selectedChannelId) {
-      setSelectedChannelId(channelOptions[0].id);
-      console.log("Auto-selected channel ID:", channelOptions[0].id);
-    }
-  }, []);
-
-  // Check if data exists in localStorage when channel is selected
-  useEffect(() => {
-    if (selectedChannelId) {
-      checkLocalStorageData();
-    }
-  }, [selectedChannelId]);
-
   // Check if data exists in localStorage for the selected channel
-  const checkLocalStorageData = () => {
+  const checkLocalStorageData = useCallback(() => {
     try {
       setDataLoaded(false);
       setRelatedChannels([]);
@@ -113,7 +81,36 @@ export default function RelatedChannels() {
       console.error("Error checking localStorage:", error);
       setDataLoaded(false);
     }
-  };
+  }, [selectedChannelId]);
+
+  // Load user channels
+  useEffect(() => {
+    const channels = getChannels();
+    console.log("Available channels:", channels);
+
+    const channelOptions = channels
+      .filter((channel) => channel.channelInfo?.id)
+      .map((channel) => ({
+        id: channel.channelInfo!.id,
+        title: channel.channelInfo!.title,
+      }));
+
+    console.log("Channel options:", channelOptions);
+    setUserChannels(channelOptions);
+
+    // Auto-select first channel if available
+    if (channelOptions.length > 0 && !selectedChannelId) {
+      setSelectedChannelId(channelOptions[0].id);
+      console.log("Auto-selected channel ID:", channelOptions[0].id);
+    }
+  }, [selectedChannelId]);
+
+  // Check if data exists in localStorage when channel is selected
+  useEffect(() => {
+    if (selectedChannelId) {
+      checkLocalStorageData();
+    }
+  }, [selectedChannelId, checkLocalStorageData]);
 
   // Fetch related channels when the process button is clicked
   const fetchRelatedChannels = async () => {
@@ -133,10 +130,10 @@ export default function RelatedChannels() {
       // Set mock raw API response for demo purposes
       const mockRawResponse = `
 Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and differences
-1,Gaming Enthusiast,Gaming & Let's Plays,8.5,"Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content."
-2,Tech Reviews Pro,Tech Reviews,7.2,"Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews."
-3,Creative Tutorials,Design & Creative Skills,6.8,"Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns."
-4,Digital Marketing Mastery,Digital Marketing,5.9,"Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
+1,Gaming Enthusiast,Gaming & Let&apos;s Plays,8.5,&quot;Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content.&quot;
+2,Tech Reviews Pro,Tech Reviews,7.2,&quot;Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews.&quot;
+3,Creative Tutorials,Design & Creative Skills,6.8,&quot;Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns.&quot;
+4,Digital Marketing Mastery,Digital Marketing,5.9,&quot;Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style.&quot;
 `;
       setRawResponse(mockRawResponse);
       setParsedChannels(parsePerplexityData(mockRawResponse));
@@ -707,7 +704,7 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
                                   {formatSubscriberCount(
                                     youtubeChannel.subscriberCount
                                   )}{" "}
-                                  • {youtubeChannel.videoCount} videos
+                                  &bull; {youtubeChannel.videoCount} videos
                                 </div>
                               </div>
                             </>

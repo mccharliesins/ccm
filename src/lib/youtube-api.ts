@@ -859,6 +859,7 @@ interface PerplexityChannel {
 
 /**
  * Use Perplexity API to find similar channels based on reference channel
+ * @private Internal function, not exported
  */
 async function findSimilarChannelsWithPerplexity(
   channelName: string,
@@ -1003,8 +1004,8 @@ Please provide the output in CSV format.
       // Expect format: Rank, Channel Name, Niche/Category, Similarity Score, Notes
       // If there's a URL column, we'll ignore it
       if (cleanParts.length >= 4) {
-        let rank = parseInt(cleanParts[0]) || i;
-        let channelName = cleanParts[1];
+        const rank = parseInt(cleanParts[0]) || i;
+        const channelName = cleanParts[1];
         let niche = '';
         let similarityScore = 0;
         let notes = '';
@@ -1047,6 +1048,7 @@ Please provide the output in CSV format.
 
 /**
  * Get detailed channel information for a list of channels
+ * @private Internal function, not exported
  */
 async function getDetailedChannelInfo(channels: PerplexityChannel[]): Promise<RelatedChannel[]> {
   try {

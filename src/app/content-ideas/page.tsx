@@ -11,8 +11,8 @@ export default function ContentIdeasPage() {
         </h1>
         <p className="text-gray-600 dark:text-gray-300 mb-8">
           Generate content ideas based on trending topics from related channels
-          in your niche. These ideas are tailored to match your channel's voice
-          and style.
+          in your niche. These ideas are tailored to match your channel&apos;s
+          voice and style.
         </p>
         <ClientOnly>
           <ContentIdeas />
