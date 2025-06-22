@@ -1515,4 +1515,295 @@ export function getMockRelatedChannels(): RelatedChannel[] {
       notes: "Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
     }
   ];
+}
+
+// Add new interface for enhanced content ideas
+export interface EnhancedContentIdea {
+  title: string;
+  description: string;
+  viralityScore: number;
+  whyToMake: string;
+}
+
+/**
+ * Get channel bio (description) from YouTube API
+ * 
+ * @param channelId The channel ID to get bio for
+ * @returns Channel description
+ */
+export async function getChannelBio(channelId: string): Promise<string> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available');
+      return '';
+    }
+
+    // Handle @username format for channel IDs
+    let apiUrl = '';
+    if (channelId.startsWith('@')) {
+      // Use forHandle parameter instead of id for @username format
+      apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet&forHandle=${channelId}&key=${API_KEY}`;
+    } else {
+      // Regular channel ID lookup
+      apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet&id=${channelId}&key=${API_KEY}`;
+    }
+
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('YouTube API error (channels):', errorData);
+      return '';
+    }
+    
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+      console.error('No channel information found');
+      return '';
+    }
+    
+    return data.items[0].snippet.description || '';
+  } catch (error) {
+    console.error('Error getting channel bio:', error);
+    return '';
+  }
+}
+
+/**
+ * Generate enhanced content ideas based on reference channel and similar channels
+ * 
+ * @param referenceChannelId The reference channel ID
+ * @param similarChannelIds Array of similar channel IDs (up to 5)
+ * @returns Array of enhanced content ideas
+ */
+export async function generateEnhancedContentIdeas(
+  referenceChannelId: string,
+  similarChannelIds: string[]
+): Promise<EnhancedContentIdea[]> {
+  try {
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+    
+    if (!GEMINI_API_KEY) {
+      console.error('Gemini API key is not available');
+      return [];
+    }
+    
+    console.log("Generating enhanced content ideas for reference channel:", referenceChannelId);
+    
+    // Get reference channel info
+    const referenceChannelInfo = await getChannelInfo(referenceChannelId);
+    if (!referenceChannelInfo) {
+      console.error('Could not get reference channel info');
+      return [];
+    }
+    
+    // Get reference channel bio
+    const referenceChannelBio = await getChannelBio(referenceChannelId);
+    
+    // Get reference channel recent videos (last 15)
+    const referenceVideos = await getRecentVideos(referenceChannelId, 15);
+    console.log(`Found ${referenceVideos.length} recent videos from reference channel`);
+    
+    // Limit similar channels to 5
+    const limitedSimilarChannelIds = similarChannelIds.slice(0, 5);
+    
+    // Get similar channels info and videos
+    const similarChannelsData = [];
+    for (const channelId of limitedSimilarChannelIds) {
+      const channelInfo = await getChannelInfo(channelId);
+      if (!channelInfo) continue;
+      
+      const channelBio = await getChannelBio(channelId);
+      
+      // Get top performing videos from similar channel
+      const topVideos = await getTopPerformingVideos(channelId, 10);
+      
+      similarChannelsData.push({
+        name: channelInfo.title,
+        url: channelInfo.customUrl || `https://youtube.com/channel/${channelId}`,
+        bio: channelBio,
+        videos: topVideos.map(video => video.title)
+      });
+    }
+    
+    // Prepare the prompt for Gemini
+    let prompt = `
+I want you to generate 10 high-potential video content ideas for a reference YouTube channel by deeply analyzing both the reference channel's recent content and the best-performing videos of its competitor channels.
+
+Input data you will receive:
+
+1. Reference Channel Data:  
+- Name: "${referenceChannelInfo.title}"  
+- URL: "${referenceChannelInfo.customUrl || `https://youtube.com/channel/${referenceChannelId}`}"  
+- Bio: "${referenceChannelBio}"  
+- Last 15 Video Titles:  
+${referenceVideos.map(video => `  "${video.title}"`).join('\n')}
+
+2. Competitor Channels Data (for each competitor):  
+`;
+
+    // Add similar channels data
+    similarChannelsData.forEach((channel, index) => {
+      prompt += `
+- Name: "${channel.name}"  
+- URL: "${channel.url}"  
+- Bio: "${channel.bio}"  
+- Best Performing 10 Video Titles:  
+${channel.videos.map(title => `  "${title}"`).join('\n')}
+
+`;
+      if (index < similarChannelsData.length - 1) {
+        prompt += '\n';
+      }
+    });
+
+    prompt += `
+Your task:
+
+- Analyze the reference channel's niche, style, and recent video topics.  
+- Analyze the competitor channels' niches, styles, and best-performing video topics.  
+- Identify trending, engaging, and relevant content themes across all data.  
+- Generate a list of 10 video ideas tailored specifically for the reference channel, considering its unique style and audience.  
+- For each idea, provide:  
+  - **title** (in a conversational, slightly sarcastic or candid tone matching the reference channel)  
+  - **description** (brief, engaging, and in the reference channel's tone)  
+  - **virality score** (scale 1-10, based on trendiness, audience interest, and shareability)  
+  - **why to make this video** (a short rationale explaining the idea's relevance and potential impact)
+
+Output format:
+
+Provide the output as a CSV with the following columns, each value enclosed in double quotes for easy parsing:
+
+"title","description","virality score","why to make this video"
+
+Example:
+"Why Finding a Dev Job in 2025 is Actually Worse Than You Think","Dive into the brutal realities of the 2025 dev job market, AI interview bots, and why your resume might be getting ghosted more than ever. Spoiler: It's not just you.","9","Addresses urgent pain points developers face in the current job market, driving high engagement."
+
+Make sure the tone is consistent with the reference channel's style. Only include the CSV data in your response, nothing else.
+`;
+
+    console.log("Calling Gemini API for enhanced content ideas");
+    
+    // Call Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Gemini API error:', errorData);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.candidates[0].content.parts[0].text.trim();
+    
+    try {
+      // Parse the CSV response
+      const lines = content.split('\n').filter(line => line.trim());
+      
+      // Skip header line if present
+      const startIndex = lines[0].toLowerCase().includes('title') ? 1 : 0;
+      
+      const ideas: EnhancedContentIdea[] = [];
+      
+      for (let i = startIndex; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Parse CSV line with proper handling of quoted fields
+        const fields = parseCSVLine(line);
+        
+        if (fields && fields.length >= 4) {
+          ideas.push({
+            title: fields[0],
+            description: fields[1],
+            viralityScore: parseInt(fields[2]) || 0,
+            whyToMake: fields[3]
+          });
+        }
+      }
+      
+      return ideas;
+    } catch (error) {
+      console.error('Error parsing enhanced content ideas:', error);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error generating enhanced content ideas:', error);
+    return [];
+  }
+}
+
+/**
+ * Helper function to parse a CSV line with proper handling of quoted fields
+ */
+function parseCSVLine(line: string): string[] | null {
+  try {
+    const result: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+    let i = 0;
+    
+    while (i < line.length) {
+      const char = line[i];
+      
+      // Handle quotes
+      if (char === '"') {
+        if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+          // Double quotes inside quoted field = escaped quote
+          currentField += '"';
+          i += 2; // Skip both quotes
+          continue;
+        } else {
+          // Toggle quote state
+          inQuotes = !inQuotes;
+          i++;
+          continue;
+        }
+      }
+      
+      // Handle commas
+      if (char === ',' && !inQuotes) {
+        result.push(currentField);
+        currentField = '';
+        i++;
+        continue;
+      }
+      
+      // Add character to current field
+      currentField += char;
+      i++;
+    }
+    
+    // Add the last field
+    result.push(currentField);
+    
+    // Clean up quotes from all fields
+    return result.map(field => {
+      // Remove surrounding quotes if present
+      if (field.startsWith('"') && field.endsWith('"')) {
+        return field.substring(1, field.length - 1).trim();
+      }
+      return field.trim();
+    });
+  } catch (error) {
+    console.error("Error parsing CSV line:", error);
+    return null;
+  }
 } 
