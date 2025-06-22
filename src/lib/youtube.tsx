@@ -1,12 +1,14 @@
 "use client";
 
 import React from "react";
+import { YouTubeChannelInfo } from "./youtube-api";
 
 // Define YouTube channel type
 export type YouTubeChannel = {
   id: string;
   url: string;
   addedAt: string;
+  channelInfo?: YouTubeChannelInfo;
 };
 
 // Function to get all channels
@@ -25,7 +27,10 @@ export function getChannels(): YouTubeChannel[] {
 }
 
 // Function to add a channel
-export function addChannel(url: string): YouTubeChannel {
+export function addChannel(
+  url: string,
+  channelInfo?: YouTubeChannelInfo
+): YouTubeChannel {
   const channels = getChannels();
 
   // Basic URL validation
@@ -38,6 +43,7 @@ export function addChannel(url: string): YouTubeChannel {
     id: Date.now().toString(),
     url,
     addedAt: new Date().toISOString(),
+    channelInfo,
   };
 
   // Add to channels array
@@ -45,6 +51,30 @@ export function addChannel(url: string): YouTubeChannel {
   localStorage.setItem("youtube_channels", JSON.stringify(channels));
 
   return newChannel;
+}
+
+// Function to update a channel
+export function updateChannel(
+  id: string,
+  updates: Partial<YouTubeChannel>
+): YouTubeChannel | null {
+  const channels = getChannels();
+  const index = channels.findIndex((channel) => channel.id === id);
+
+  if (index === -1) {
+    return null;
+  }
+
+  // Update channel
+  const updatedChannel = {
+    ...channels[index],
+    ...updates,
+  };
+
+  channels[index] = updatedChannel;
+  localStorage.setItem("youtube_channels", JSON.stringify(channels));
+
+  return updatedChannel;
 }
 
 // Function to remove a channel

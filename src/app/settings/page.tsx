@@ -7,20 +7,24 @@ import {
   addChannel,
   getChannels,
   removeChannel,
+  updateChannel,
   YouTubeChannel,
 } from "@/lib/youtube";
+import { fetchChannelInfo } from "@/lib/youtube-api";
+import ChannelCard from "@/components/ChannelCard";
 
 export default function Settings() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [channels, setChannels] = useState<YouTubeChannel[]>([]);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Redirect to login if not authenticated
-  if (!isLoading && !user) {
+  if (!authLoading && !user) {
     router.push("/login");
     return null;
   }
@@ -28,7 +32,43 @@ export default function Settings() {
   // Load channels on mount
   useEffect(() => {
     if (user) {
-      setChannels(getChannels());
+      const storedChannels = getChannels();
+      setChannels(storedChannels);
+
+      // Fetch channel info for channels that don't have it
+      const fetchMissingChannelInfo = async () => {
+        setIsLoading(true);
+        const updatedChannels = [...storedChannels];
+        let hasUpdates = false;
+
+        for (let i = 0; i < updatedChannels.length; i++) {
+          if (!updatedChannels[i].channelInfo) {
+            try {
+              const channelInfo = await fetchChannelInfo(
+                updatedChannels[i].url
+              );
+              if (channelInfo) {
+                updatedChannels[i] =
+                  updateChannel(updatedChannels[i].id, { channelInfo }) ||
+                  updatedChannels[i];
+                hasUpdates = true;
+              }
+            } catch (err) {
+              console.error(
+                `Error fetching info for channel ${updatedChannels[i].url}:`,
+                err
+              );
+            }
+          }
+        }
+
+        if (hasUpdates) {
+          setChannels(updatedChannels);
+        }
+        setIsLoading(false);
+      };
+
+      fetchMissingChannelInfo();
     }
   }, [user]);
 
@@ -49,8 +89,19 @@ export default function Settings() {
         return;
       }
 
-      // Add channel
-      const newChannel = addChannel(youtubeUrl);
+      // Fetch channel info
+      const channelInfo = await fetchChannelInfo(youtubeUrl);
+
+      if (!channelInfo) {
+        setError(
+          "Could not fetch channel information. Please check the URL and try again."
+        );
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Add channel with info
+      const newChannel = addChannel(youtubeUrl, channelInfo);
 
       // Update state
       setChannels([...channels, newChannel]);
@@ -75,7 +126,7 @@ export default function Settings() {
     }
   };
 
-  if (isLoading) {
+  if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[80vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -136,35 +187,21 @@ export default function Settings() {
         </form>
 
         <div>
-          <h3 className="text-md font-medium text-gray-900 mb-2">
+          <h3 className="text-md font-medium text-gray-900 mb-4">
             Your Channels
           </h3>
           {channels.length === 0 ? (
             <p className="text-gray-500 text-sm">No channels added yet</p>
           ) : (
-            <ul className="divide-y divide-gray-200">
+            <div className="space-y-4">
               {channels.map((channel) => (
-                <li
+                <ChannelCard
                   key={channel.id}
-                  className="py-3 flex justify-between items-center"
-                >
-                  <div className="flex-grow">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {channel.url}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Added on {new Date(channel.addedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleRemoveChannel(channel.id)}
-                    className="ml-4 text-red-600 hover:text-red-800 text-sm"
-                  >
-                    Remove
-                  </button>
-                </li>
+                  channel={channel}
+                  onRemove={handleRemoveChannel}
+                />
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </div>

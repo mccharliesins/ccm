@@ -1,22 +1,70 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getChannels, updateChannel, YouTubeChannel } from "@/lib/youtube";
+import { fetchChannelInfo } from "@/lib/youtube-api";
+import ChannelsList from "@/components/ChannelsList";
 
 export default function Dashboard() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("overview");
+  const [channels, setChannels] = useState<YouTubeChannel[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Redirect to login if not authenticated
-  if (!isLoading && !user) {
+  if (!authLoading && !user) {
     router.push("/login");
     return null;
   }
 
-  if (isLoading) {
+  // Load channels and fetch missing info
+  useEffect(() => {
+    if (user) {
+      const storedChannels = getChannels();
+      setChannels(storedChannels);
+
+      // Fetch channel info for channels that don't have it
+      const fetchMissingChannelInfo = async () => {
+        setIsLoading(true);
+        const updatedChannels = [...storedChannels];
+        let hasUpdates = false;
+
+        for (let i = 0; i < updatedChannels.length; i++) {
+          if (!updatedChannels[i].channelInfo) {
+            try {
+              const channelInfo = await fetchChannelInfo(
+                updatedChannels[i].url
+              );
+              if (channelInfo) {
+                updatedChannels[i] =
+                  updateChannel(updatedChannels[i].id, { channelInfo }) ||
+                  updatedChannels[i];
+                hasUpdates = true;
+              }
+            } catch (err) {
+              console.error(
+                `Error fetching info for channel ${updatedChannels[i].url}:`,
+                err
+              );
+            }
+          }
+        }
+
+        if (hasUpdates) {
+          setChannels(updatedChannels);
+        }
+        setIsLoading(false);
+      };
+
+      fetchMissingChannelInfo();
+    }
+  }, [user]);
+
+  if (authLoading || isLoading) {
     return (
       <div className="flex justify-center items-center min-h-[80vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -101,6 +149,24 @@ export default function Dashboard() {
           Manage your content and discover trending ideas
         </p>
       </div>
+
+      {/* YouTube Channels Bar */}
+      {channels.length > 0 && (
+        <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <div className="flex justify-between items-center mb-3">
+            <h2 className="text-sm font-medium text-gray-700">
+              Your YouTube Channels
+            </h2>
+            <Link
+              href="/settings"
+              className="text-xs text-indigo-600 hover:text-indigo-800"
+            >
+              Manage Channels
+            </Link>
+          </div>
+          <ChannelsList channels={channels} />
+        </div>
+      )}
 
       {/* Dashboard Tabs */}
       <div className="mb-6 border-b border-gray-200">
