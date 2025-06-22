@@ -23,9 +23,7 @@ export default function ChannelsList({ channels }: ChannelsListProps) {
   if (channels.length === 0) {
     return (
       <div className="text-center py-4">
-        <p className="text-gray-500 dark:text-gray-400">
-          No YouTube channels added yet.
-        </p>
+        <p className="text-gray-500">No YouTube channels added yet.</p>
       </div>
     );
   }
@@ -38,10 +36,10 @@ export default function ChannelsList({ channels }: ChannelsListProps) {
             return (
               <div
                 key={channel.id}
-                className="flex-shrink-0 w-32 bg-white dark:bg-gray-800 rounded-lg shadow p-2 text-center"
+                className="flex-shrink-0 w-32 bg-white rounded-lg shadow p-2 text-center"
               >
-                <div className="w-12 h-12 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto"></div>
-                <p className="mt-2 text-xs text-gray-800 dark:text-gray-200 truncate">
+                <div className="w-12 h-12 bg-gray-200 rounded-full mx-auto"></div>
+                <p className="mt-2 text-xs text-gray-800 truncate">
                   Loading...
                 </p>
               </div>
@@ -56,9 +54,9 @@ export default function ChannelsList({ channels }: ChannelsListProps) {
               href={channelUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 w-36 bg-white dark:bg-gray-800 rounded-lg shadow p-3 text-center hover:shadow-md transition-shadow"
+              className="flex-shrink-0 w-36 bg-white rounded-lg shadow p-3 text-center hover:shadow-md transition-shadow"
             >
-              <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto border-2 border-gray-100 dark:border-gray-700">
+              <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto border-2 border-gray-100">
                 <Image
                   src={
                     channel.channelInfo.thumbnails.medium ||
@@ -69,10 +67,10 @@ export default function ChannelsList({ channels }: ChannelsListProps) {
                   style={{ objectFit: "cover" }}
                 />
               </div>
-              <p className="mt-2 text-sm font-medium text-gray-800 dark:text-gray-200 truncate">
+              <p className="mt-2 text-sm font-medium text-gray-800 truncate">
                 {channel.channelInfo.title}
               </p>
-              <div className="flex flex-col text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex flex-col text-xs text-gray-500">
                 <span className="truncate">
                   {formatSubscriberCount(channel.channelInfo.subscriberCount)}{" "}
                   subs

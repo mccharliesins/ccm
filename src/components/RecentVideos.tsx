@@ -201,16 +201,16 @@ export default function RecentVideos() {
 
   if (error) {
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
-        <p className="text-red-600 dark:text-red-400">{error}</p>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+        <p className="text-red-600">{error}</p>
       </div>
     );
   }
 
   if (videos.length === 0) {
     return (
-      <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6 text-center">
-        <p className="text-gray-500 dark:text-gray-400">
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+        <p className="text-gray-500">
           No videos found. Add YouTube channels in the settings to see their
           latest uploads.
         </p>
@@ -229,16 +229,16 @@ export default function RecentVideos() {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
+    <div className="bg-white shadow rounded-lg p-4">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 md:mb-0">
+        <h3 className="text-lg font-medium text-gray-900 mb-2 md:mb-0">
           Last 20 Uploads
         </h3>
 
         {/* Mobile Filter Toggle Button */}
         <button
           onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          className="md:hidden flex items-center justify-center px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
         >
           <span>Filters</span>
           <svg
@@ -257,26 +257,19 @@ export default function RecentVideos() {
             />
           </svg>
         </button>
-      </div>
 
-      {/* Filter Controls Container - Updated for better layout */}
-      <div className={`mb-6 ${showFilters ? "block" : "hidden md:block"}`}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+        {/* Desktop Filters */}
+        <div
+          className={`${
+            showFilters ? "flex" : "hidden"
+          } md:flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2 md:mt-0`}
+        >
           {/* Channel Filter */}
-          <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-              Channel
-            </label>
+          <div className="relative">
             <select
               value={filterBy}
               onChange={(e) => setFilterBy(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-              style={
-                {
-                  "--ring-primary": "var(--primary)",
-                  "--border-primary": "var(--primary)",
-                } as React.CSSProperties
-              }
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
             >
               <option value="all">All Channels</option>
               {channels.map((channel) => (
@@ -287,42 +280,24 @@ export default function RecentVideos() {
             </select>
           </div>
 
-          {/* Sort By Filter */}
-          <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-              Sort By
-            </label>
+          {/* Sort By */}
+          <div className="relative">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="block w-full pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-              style={
-                {
-                  "--ring-primary": "var(--primary)",
-                  "--border-primary": "var(--primary)",
-                } as React.CSSProperties
-              }
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
             >
               <option value="newest">Newest First</option>
-              <option value="views">Most Viewed</option>
+              <option value="views">Most Views</option>
             </select>
           </div>
 
-          {/* Date Range Filter */}
-          <div>
-            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
-              Time Period
-            </label>
+          {/* Date Range */}
+          <div className="relative">
             <select
               value={dateRange}
               onChange={handleDateRangeChange}
-              className="block w-full pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-              style={
-                {
-                  "--ring-primary": "var(--primary)",
-                  "--border-primary": "var(--primary)",
-                } as React.CSSProperties
-              }
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
             >
               <option value="all">All Time</option>
               <option value="week">Last 7 Days</option>
@@ -330,102 +305,67 @@ export default function RecentVideos() {
               <option value="3months">Last 3 Months</option>
               <option value="6months">Last 6 Months</option>
               <option value="year">Last Year</option>
-              <option value="custom">Custom Date Range</option>
+              <option value="custom">Custom Range</option>
             </select>
           </div>
-        </div>
 
-        {/* Custom Date Picker - Full width when visible */}
-        {showCustomDatePicker && (
-          <div className="flex flex-wrap items-center gap-3 mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-            <label
-              htmlFor="startDate"
-              className="whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400"
-            >
-              From:
-            </label>
-            <input
-              id="startDate"
-              type="date"
-              value={customStartDate}
-              onChange={(e) => setCustomStartDate(e.target.value)}
-              max={new Date().toISOString().split("T")[0]}
-              className="flex-grow min-w-[200px] pl-3 pr-3 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-              style={
-                {
-                  "--ring-primary": "var(--primary)",
-                  "--border-primary": "var(--primary)",
-                } as React.CSSProperties
-              }
-            />
-            <span className="whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400">
-              to Today
-            </span>
-          </div>
-        )}
+          {/* Custom Date Picker */}
+          {showCustomDatePicker && (
+            <div className="relative">
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
+              />
+            </div>
+          )}
+        </div>
       </div>
 
-      {filteredVideos.length === 0 ? (
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6 text-center">
-          <p className="text-gray-500 dark:text-gray-400">
-            No videos match your filter criteria.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredVideos.map((video) => (
-            <a
-              key={video.id}
-              href={`https://www.youtube.com/watch?v=${video.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex flex-col bg-gray-50 dark:bg-gray-900 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
-            >
-              {/* Thumbnail with duration */}
-              <div className="relative">
-                <div className="aspect-video w-full">
-                  <Image
-                    src={video.thumbnails.medium.url}
-                    alt={video.title}
-                    fill
-                    style={{ objectFit: "cover" }}
-                    className="rounded-t-lg"
-                  />
-                </div>
-                <div className="absolute bottom-2 right-2 bg-black bg-opacity-75 text-white text-xs px-1 py-0.5 rounded">
-                  {formatDuration(video.duration)}
-                </div>
+      {/* Videos Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredVideos.map((video) => (
+          <a
+            key={video.id}
+            href={`https://www.youtube.com/watch?v=${video.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+          >
+            <div className="relative aspect-video bg-gray-100">
+              {/* Thumbnail */}
+              <Image
+                src={
+                  video.thumbnails.maxres?.url ||
+                  video.thumbnails.standard?.url ||
+                  video.thumbnails.high.url
+                }
+                alt={video.title}
+                fill
+                style={{ objectFit: "cover" }}
+              />
+              {/* Duration Badge */}
+              <div className="absolute bottom-2 right-2 bg-black bg-opacity-70 text-white text-xs px-1 py-0.5 rounded">
+                {formatDuration(video.duration)}
               </div>
-
-              {/* Video info */}
-              <div className="p-3">
-                <h4 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 mb-1">
-                  {video.title}
-                </h4>
-                <div className="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
-                  <div>{formatViewCount(video.viewCount)}</div>
-                  <div>{formatDate(video.publishedAt)}</div>
-                </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[60%]">
-                    {video.channelTitle}
-                  </span>
-                  <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
-                    <svg
-                      className="w-3 h-3 mr-1"
-                      fill="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
-                    </svg>
-                    {parseInt(video.likeCount).toLocaleString()}
-                  </div>
-                </div>
+            </div>
+            <div className="p-3 flex-grow flex flex-col">
+              <h4 className="font-medium text-sm line-clamp-2 mb-1 text-gray-900">
+                {video.title}
+              </h4>
+              <div className="flex items-center justify-between mt-auto">
+                <span className="text-xs text-gray-500">
+                  {formatDate(video.publishedAt)}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {formatViewCount(video.viewCount)}
+                </span>
               </div>
-            </a>
-          ))}
-        </div>
-      )}
+            </div>
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
