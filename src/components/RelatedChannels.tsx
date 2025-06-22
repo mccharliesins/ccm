@@ -6,6 +6,7 @@ import {
   RelatedChannel,
   findRelatedChannels,
   getMockRelatedChannels,
+  formatViewCount,
 } from "@/lib/youtube-api";
 import { getChannels } from "@/lib/youtube";
 
@@ -16,6 +17,15 @@ interface PerplexityChannelData {
   niche: string;
   similarityScore: number;
   notes: string;
+}
+
+// Interface for YouTube channel data
+interface YouTubeChannelData {
+  id: string;
+  title: string;
+  thumbnailUrl: string;
+  subscriberCount: string;
+  videoCount: string;
 }
 
 export default function RelatedChannels() {
@@ -29,10 +39,20 @@ export default function RelatedChannels() {
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [useMockData, setUseMockData] = useState(false);
   const [showRawData, setShowRawData] = useState(false);
-  const [rawApiResponse, setRawApiResponse] = useState<string>("");
-  const [parsedPerplexityData, setParsedPerplexityData] = useState<
-    PerplexityChannelData[]
-  >([]);
+  const [rawResponse, setRawResponse] = useState<string>("");
+  const [parsedChannels, setParsedChannels] = useState<PerplexityChannelData[]>(
+    []
+  );
+  const [youtubeData, setYoutubeData] = useState<
+    Record<string, YouTubeChannelData>
+  >({});
+
+  // Define RGB values for primary colors
+  const colorValues = {
+    primary: "14, 165, 233", // sky-500
+    secondary: "249, 115, 22", // orange-500
+    accent: "139, 92, 246", // violet-500
+  };
 
   // Load user channels
   useEffect(() => {
@@ -55,6 +75,171 @@ export default function RelatedChannels() {
       console.log("Auto-selected channel ID:", channelOptions[0].id);
     }
   }, [selectedChannelId]);
+
+  // Fetch related channels when a channel is selected
+  useEffect(() => {
+    async function fetchRelatedChannels() {
+      if (!selectedChannelId) {
+        console.log("No channel selected, skipping fetch");
+        return;
+      }
+
+      // If using mock data, load that instead
+      if (useMockData) {
+        console.log("Using mock data instead of API call");
+        setRelatedChannels(getMockRelatedChannels());
+        setIsLoading(false);
+        setError(null);
+
+        // Set mock raw API response for demo purposes
+        const mockRawResponse = `
+Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and differences
+1,Gaming Enthusiast,Gaming & Let's Plays,8.5,"Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content."
+2,Tech Reviews Pro,Tech Reviews,7.2,"Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews."
+3,Creative Tutorials,Design & Creative Skills,6.8,"Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns."
+4,Digital Marketing Mastery,Digital Marketing,5.9,"Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
+`;
+        setRawResponse(mockRawResponse);
+        setParsedChannels(parsePerplexityData(mockRawResponse));
+        return;
+      }
+
+      try {
+        setIsLoading(true);
+        setError(null);
+        setRawResponse("");
+        setParsedChannels([]);
+
+        console.log("Fetching related channels for:", selectedChannelId);
+
+        // Call the API to find related channels
+        const result = await findRelatedChannels(selectedChannelId);
+        console.log("Related channels result:", result);
+
+        if (result.channels.length === 0) {
+          setRelatedChannels([]);
+          setError(
+            "No related channels found. Try adding more videos to your channel or select a different channel."
+          );
+          setIsLoading(false);
+          return;
+        }
+
+        // Set the raw API response
+        setRawResponse(result.rawResponse);
+
+        // Parse the raw response
+        const parsed = parsePerplexityData(result.rawResponse);
+        setParsedChannels(parsed);
+
+        // Set the related channels directly
+        console.log("Setting related channels:", result.channels);
+        setRelatedChannels(result.channels);
+
+        // Fetch YouTube data for each channel
+        fetchYouTubeData(parsed);
+
+        // Save to localStorage for future use
+        try {
+          localStorage.setItem(
+            `relatedChannels_${selectedChannelId}`,
+            JSON.stringify(result.channels)
+          );
+        } catch (err) {
+          console.error("Error saving to localStorage:", err);
+        }
+      } catch (err) {
+        console.error("Error fetching related channels:", err);
+        setError("Failed to fetch related channels. Please try again.");
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchRelatedChannels();
+  }, [selectedChannelId, useMockData]);
+
+  // Fetch YouTube channel data for each channel name
+  const fetchYouTubeData = async (channels: PerplexityChannelData[]) => {
+    const API_KEY = process.env.NEXT_PUBLIC_YOUTUBE_API_KEY;
+
+    if (!API_KEY) {
+      console.error("YouTube API key is not available");
+      return;
+    }
+
+    const channelDataMap: Record<string, YouTubeChannelData> = {};
+
+    for (const channel of channels) {
+      try {
+        console.log(`Fetching YouTube data for: ${channel.channelName}`);
+
+        // Search for the channel by name
+        const searchUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=channel&q=${encodeURIComponent(
+          channel.channelName
+        )}&maxResults=1&key=${API_KEY}`;
+        const searchResponse = await fetch(searchUrl);
+
+        if (!searchResponse.ok) {
+          const errorData = await searchResponse.json();
+          console.error("YouTube API error (search):", errorData);
+          continue;
+        }
+
+        const searchData = await searchResponse.json();
+
+        if (!searchData.items || searchData.items.length === 0) {
+          console.log(`No channels found for name: ${channel.channelName}`);
+          continue;
+        }
+
+        // Get the channel ID from search results
+        const channelId = searchData.items[0].snippet.channelId;
+        const thumbnailUrl =
+          searchData.items[0].snippet.thumbnails?.default?.url || "";
+        const title = searchData.items[0].snippet.title;
+
+        // Get detailed channel information
+        const channelUrl = `https://www.googleapis.com/youtube/v3/channels?part=statistics&id=${channelId}&key=${API_KEY}`;
+        const channelResponse = await fetch(channelUrl);
+
+        if (!channelResponse.ok) {
+          const errorData = await channelResponse.json();
+          console.error("YouTube API error (channels):", errorData);
+          continue;
+        }
+
+        const channelData = await channelResponse.json();
+
+        if (!channelData.items || channelData.items.length === 0) {
+          console.log(`No channel details found for ID: ${channelId}`);
+          continue;
+        }
+
+        const statistics = channelData.items[0].statistics;
+
+        channelDataMap[channel.channelName] = {
+          id: channelId,
+          title: title,
+          thumbnailUrl: thumbnailUrl,
+          subscriberCount: statistics.subscriberCount || "0",
+          videoCount: statistics.videoCount || "0",
+        };
+
+        console.log(`Added YouTube data for: ${channel.channelName}`);
+      } catch (error) {
+        console.error(
+          `Error fetching YouTube data for "${channel.channelName}":`,
+          error
+        );
+      }
+
+      // Add a small delay to avoid rate limits
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+
+    setYoutubeData(channelDataMap);
+  };
 
   // Parse CSV data from Perplexity API response
   const parsePerplexityData = (csvData: string): PerplexityChannelData[] => {
@@ -213,96 +398,6 @@ export default function RelatedChannels() {
     }
   };
 
-  // Fetch related channels when a channel is selected
-  useEffect(() => {
-    async function fetchRelatedChannels() {
-      if (!selectedChannelId) {
-        console.log("No channel selected, skipping fetch");
-        return;
-      }
-
-      // If using mock data, load that instead
-      if (useMockData) {
-        console.log("Using mock data instead of API call");
-        setRelatedChannels(getMockRelatedChannels());
-        setIsLoading(false);
-        setError(null);
-
-        // Set mock raw API response for demo purposes
-        const mockRawResponse = `
-Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and differences
-1,Gaming Enthusiast,Gaming & Let's Plays,8.5,"Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content."
-2,Tech Reviews Pro,Tech Reviews,7.2,"Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews."
-3,Creative Tutorials,Design & Creative Skills,6.8,"Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns."
-4,Digital Marketing Mastery,Digital Marketing,5.9,"Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
-        `;
-
-        setRawApiResponse(mockRawResponse);
-
-        // Parse the mock data
-        const parsedData = parsePerplexityData(mockRawResponse);
-        setParsedPerplexityData(parsedData);
-
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        setError(null);
-        setDebugInfo("");
-        setRawApiResponse("");
-        setParsedPerplexityData([]);
-
-        console.log("Fetching related channels for:", selectedChannelId);
-
-        // Find related channels using the updated API
-        const result = await findRelatedChannels(selectedChannelId);
-        console.log("Related channels result:", result);
-
-        if (result.channels.length === 0) {
-          setRelatedChannels([]);
-          setError(
-            "No related channels found. Try adding more videos to your channel or select a different channel."
-          );
-          setDebugInfo(
-            "API returned zero channels. This could be due to API quotas, invalid channel ID, or no related content found."
-          );
-          setIsLoading(false);
-          return;
-        }
-
-        // Set the raw API response
-        setRawApiResponse(result.rawResponse);
-
-        // Parse the raw response
-        const parsedData = parsePerplexityData(result.rawResponse);
-        setParsedPerplexityData(parsedData);
-
-        // Set the related channels directly
-        console.log("Setting related channels:", result.channels);
-        setRelatedChannels(result.channels);
-
-        // Save to localStorage for future use
-        try {
-          localStorage.setItem(
-            `relatedChannels_${selectedChannelId}`,
-            JSON.stringify(result.channels)
-          );
-        } catch (err) {
-          console.error("Error saving to localStorage:", err);
-        }
-      } catch (err) {
-        console.error("Error fetching related channels:", err);
-        setError("Failed to fetch related channels. Please try again later.");
-        setDebugInfo("Error fetching related channels: " + JSON.stringify(err));
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    fetchRelatedChannels();
-  }, [selectedChannelId, userChannels, useMockData]);
-
   // Toggle mock data
   const toggleMockData = () => {
     setUseMockData((prev) => !prev);
@@ -315,118 +410,17 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
   };
 
   // Format subscriber count
-  const formatSubscriberCount = (count: string) => {
-    const num = parseInt(count, 10);
+  const formatSubscriberCount = (count: string): string => {
+    const num = parseInt(count);
+    if (isNaN(num)) return "0 subscribers";
+
     if (num >= 1000000) {
-      return `${(num / 1000000).toFixed(1)}M`;
+      return `${(num / 1000000).toFixed(1)}M subscribers`;
     } else if (num >= 1000) {
-      return `${(num / 1000).toFixed(1)}K`;
+      return `${(num / 1000).toFixed(1)}K subscribers`;
+    } else {
+      return `${num} subscribers`;
     }
-    return num.toLocaleString();
-  };
-
-  // Component to display Perplexity data in a table format
-  const PerplexityDataTable = ({ data }: { data: PerplexityChannelData[] }) => {
-    if (!data || data.length === 0) return null;
-
-    return (
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-800">
-            <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Rank
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Channel Name
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Niche/Category
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Similarity Score
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-              >
-                Notes
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
-            {data.map((channel, index) => (
-              <tr
-                key={index}
-                className={
-                  index % 2 === 0
-                    ? "bg-white dark:bg-gray-700"
-                    : "bg-gray-50 dark:bg-gray-800"
-                }
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
-                  {channel.rank}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                  {channel.channelName}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                  {channel.niche}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                  <div className="flex items-center">
-                    <div className="flex items-center">
-                      {[...Array(10)].map((_, i) => (
-                        <svg
-                          key={i}
-                          className={`w-3 h-3 ${
-                            i < Math.round(channel.similarityScore)
-                              ? "text-primary fill-current"
-                              : "text-gray-300 dark:text-gray-600"
-                          }`}
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                      ))}
-                      <span className="ml-1">
-                        {channel.similarityScore.toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-200">
-                  <div className="max-w-xs md:max-w-md lg:max-w-lg">
-                    <p className="line-clamp-3">{channel.notes}</p>
-                    {channel.notes && channel.notes.length > 150 && (
-                      <button
-                        className="text-xs text-primary hover:underline mt-1"
-                        onClick={() => alert(channel.notes)}
-                      >
-                        Read more
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
   };
 
   if (userChannels.length === 0) {
@@ -519,94 +513,156 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
         </div>
       </div>
 
-      {showRawData && rawApiResponse && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-            Raw API Response
-          </h3>
-          <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
-            <pre className="whitespace-pre-wrap text-xs font-mono text-gray-800 dark:text-gray-200 overflow-auto max-h-96">
-              {rawApiResponse}
-            </pre>
-          </div>
-          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-            This is the raw CSV data returned by the Perplexity API.
-          </p>
-        </div>
-      )}
-
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
-          <div
-            className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2"
-            style={{ borderColor: "var(--primary)" }}
-          ></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-          <div className="text-center">
-            <p className="text-red-600 dark:text-red-400 mb-2">{error}</p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setIsLoading(true)}
-                className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              >
-                Try Again
-              </button>
-
-              {!useMockData && (
-                <button
-                  onClick={toggleMockData}
-                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Use Demo Data
-                </button>
-              )}
-            </div>
-          </div>
-
-          {debugInfo && (
-            <div className="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono overflow-auto">
-              <p className="text-gray-700 dark:text-gray-300">Debug Info:</p>
-              <pre className="whitespace-pre-wrap text-gray-600 dark:text-gray-400">
-                {debugInfo}
-              </pre>
-            </div>
-          )}
-        </div>
-      ) : parsedPerplexityData.length > 0 ? (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
-            Similar Channels {useMockData && "(Demo Data)"}
-          </h3>
-          <PerplexityDataTable data={parsedPerplexityData} />
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative mb-6">
+          <strong className="font-bold">Error! </strong>
+          <span className="block sm:inline">{error}</span>
         </div>
       ) : (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-300">
-              No similar channels found. Try selecting a different channel or
-              use demo data.
-            </p>
-            <div className="flex justify-center gap-3 mt-4">
-              <button
-                onClick={() => setIsLoading(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Try Again
-              </button>
-
-              {!useMockData && (
-                <button
-                  onClick={toggleMockData}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                  Use Demo Data
-                </button>
-              )}
+        <>
+          {showRawData ? (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold mb-2">
+                Raw Perplexity Response
+              </h3>
+              <div className="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto">
+                <pre className="whitespace-pre-wrap text-sm text-gray-800 dark:text-gray-200">
+                  {rawResponse || "No data available"}
+                </pre>
+              </div>
             </div>
+          ) : null}
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-800">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  >
+                    Rank
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  >
+                    Channel
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  >
+                    Niche
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  >
+                    Similarity
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                  >
+                    Notes
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                {parsedChannels.map((channel) => {
+                  const youtubeChannel = youtubeData[channel.channelName];
+
+                  return (
+                    <tr key={channel.rank}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {channel.rank}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                        <div className="flex items-center">
+                          {youtubeChannel ? (
+                            <>
+                              <div className="flex-shrink-0 h-10 w-10 mr-3">
+                                <img
+                                  src={youtubeChannel.thumbnailUrl}
+                                  alt={`${channel.channelName} thumbnail`}
+                                  className="h-10 w-10 rounded-full"
+                                />
+                              </div>
+                              <div className="flex flex-col">
+                                <a
+                                  href={`https://youtube.com/channel/${youtubeChannel.id}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                                >
+                                  {channel.channelName}
+                                </a>
+                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                  {formatSubscriberCount(
+                                    youtubeChannel.subscriberCount
+                                  )}{" "}
+                                  • {youtubeChannel.videoCount} videos
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <span>{channel.channelName}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        {channel.niche}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                        <div className="flex items-center">
+                          <span className="mr-2">
+                            {channel.similarityScore.toFixed(1)}
+                          </span>
+                          <div className="flex">
+                            {[...Array(10)].map((_, i) => {
+                              // Calculate opacity based on similarity score
+                              const opacity =
+                                i < Math.floor(channel.similarityScore)
+                                  ? 1
+                                  : i === Math.floor(channel.similarityScore)
+                                  ? channel.similarityScore -
+                                    Math.floor(channel.similarityScore)
+                                  : 0;
+
+                              return (
+                                <svg
+                                  key={i}
+                                  className={`w-4 h-4`}
+                                  style={{
+                                    color: `rgba(${colorValues.primary}, ${opacity})`,
+                                    fill: opacity > 0 ? "currentColor" : "none",
+                                    stroke: "currentColor",
+                                    strokeWidth: "1",
+                                  }}
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                                </svg>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                        <div className="max-w-md">{channel.notes}</div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
