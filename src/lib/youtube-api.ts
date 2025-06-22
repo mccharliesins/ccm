@@ -80,6 +80,24 @@ interface YouTubeVideo {
   };
 }
 
+// Add new types and functions for related channels
+
+export type RelatedChannel = {
+  id: string;
+  title: string;
+  description: string;
+  customUrl: string;
+  thumbnails: {
+    default: string;
+    medium: string;
+    high: string;
+  };
+  subscriberCount: string;
+  videoCount: string;
+  viewCount: string;
+  matchFrequency: number;
+};
+
 /**
  * Extract channel ID from various YouTube URL formats
  */
@@ -329,4 +347,452 @@ export function formatViewCount(viewCount: string): string {
   } else {
     return `${count} views`;
   }
+}
+
+/**
+ * Get top videos from a channel by view count
+ * 
+ * API Documentation:
+ * Endpoint: GET https://www.googleapis.com/youtube/v3/search
+ * Parameters:
+ *   - part=snippet
+ *   - channelId={channelId}
+ *   - type=video
+ *   - order=viewCount
+ *   - maxResults=10
+ *   - key={API_KEY}
+ * 
+ * Quota Cost: 100 units per request
+ */
+export async function getTopChannelVideos(channelId: string, maxResults: number = 10): Promise<string[]> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available. Please set NEXT_PUBLIC_YOUTUBE_API_KEY in your environment variables.');
+      return [];
+    }
+
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${channelId}&type=video&order=viewCount&maxResults=${maxResults}&key=${API_KEY}`;
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('YouTube API error (search):', errorData);
+      return [];
+    }
+    
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+      console.error('No videos found for channel');
+      return [];
+    }
+    
+    // Extract video IDs
+    return data.items.map((item: {id: {videoId: string}}) => item.id.videoId);
+  } catch (error) {
+    console.error('Error fetching top channel videos:', error);
+    return [];
+  }
+}
+
+/**
+ * Extract keywords from video titles, descriptions, and tags
+ * @param videos Array of video information
+ * @returns Array of extracted keywords
+ */
+export async function extractKeywordsFromVideos(videos: {
+  title: string;
+  description: string;
+  tags?: string[];
+}[]): Promise<string[]> {
+  try {
+    const ANTHROPIC_API_KEY = process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
+    
+    if (!ANTHROPIC_API_KEY) {
+      console.error('Anthropic API key is not available');
+      
+      // Fallback: Extract basic keywords from video data
+      const allKeywords = new Set<string>();
+      
+      videos.forEach(video => {
+        // Add tags if available
+        if (video.tags) {
+          video.tags.forEach(tag => allKeywords.add(tag));
+        }
+        
+        // Extract words from title (simple approach)
+        const titleWords = video.title
+          .toLowerCase()
+          .replace(/[^\w\s]/g, '')
+          .split(/\s+/)
+          .filter(word => word.length > 3);
+        
+        titleWords.forEach(word => allKeywords.add(word));
+      });
+      
+      return Array.from(allKeywords).slice(0, 10);
+    }
+
+    // Prepare the prompt for Claude
+    const videoData = videos.map((video, i) => `
+Video ${i + 1}:
+Title: ${video.title}
+Description: ${video.description?.substring(0, 200)}${video.description?.length > 200 ? '...' : ''}
+Tags: ${video.tags ? video.tags.join(', ') : 'None'}
+`).join('\n');
+
+    const prompt = `
+I need to extract 10 highly relevant search queries for finding YouTube videos similar to these:
+
+${videoData}
+
+Based on these videos, provide 10 specific search queries that would find similar content on YouTube.
+Each query should be 2-5 words long and focused on the topics, niches, or specific content types shown in these videos.
+
+Format your response as a comma-separated list of queries only, like this:
+query one, query two, query three, etc.
+
+Only include the comma-separated list in your response, nothing else.
+`;
+
+    // Call Claude API
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-3-sonnet-20240229',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Claude API error:', errorData);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.content[0].text.trim();
+    
+    // Split by commas and trim each keyword
+    const keywords = content.split(',').map((keyword: string) => keyword.trim());
+    
+    return keywords;
+  } catch (error) {
+    console.error('Error extracting keywords:', error);
+    return [];
+  }
+}
+
+/**
+ * Search for videos by keyword and collect channel information
+ */
+export async function searchVideosByKeyword(keyword: string, maxResults: number = 20): Promise<{channelId: string, channelTitle: string}[]> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available');
+      return [];
+    }
+
+    const apiUrl = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(keyword)}&type=video&maxResults=${maxResults}&key=${API_KEY}`;
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('YouTube API error (search by keyword):', errorData);
+      return [];
+    }
+    
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+      console.log(`No videos found for keyword: ${keyword}`);
+      return [];
+    }
+    
+    // Extract channel IDs and titles
+    return data.items.map((item: {snippet: {channelId: string, channelTitle: string}}) => ({
+      channelId: item.snippet.channelId,
+      channelTitle: item.snippet.channelTitle
+    }));
+  } catch (error) {
+    console.error(`Error searching videos by keyword "${keyword}":`, error);
+    return [];
+  }
+}
+
+/**
+ * Find related channels based on a seed channel using the new approach
+ * 
+ * @param channelId The ID of the channel to find related channels for
+ * @param minSubscribers Minimum subscriber count for filtering (default: 10,000)
+ * @param maxSubscribers Maximum subscriber count for filtering (default: 500,000)
+ * @returns Array of related channels with detailed information
+ */
+export async function findRelatedChannels(
+  channelId: string,
+  minSubscribers: number = 10000,
+  maxSubscribers: number = 500000
+): Promise<RelatedChannel[]> {
+  try {
+    console.log("Starting findRelatedChannels for channelId:", channelId);
+    
+    // Step 1: Get top videos from the seed channel
+    console.log("Step 1: Getting top videos from seed channel");
+    const topVideoIds = await getTopChannelVideos(channelId, 20);
+    console.log(`Found ${topVideoIds.length} top videos`);
+    
+    if (topVideoIds.length === 0) {
+      console.log("No top videos found, returning empty array");
+      return [];
+    }
+    
+    // Step 1.1: Get detailed information for these videos
+    console.log("Step 1.1: Getting detailed information for top videos");
+    const videosUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet,statistics&id=${topVideoIds.join(',')}&key=${API_KEY}`;
+    const videosResponse = await fetch(videosUrl);
+    
+    if (!videosResponse.ok) {
+      const errorData = await videosResponse.json();
+      console.error('YouTube API error (videos):', errorData);
+      return [];
+    }
+    
+    const videosData = await videosResponse.json();
+    
+    if (!videosData.items || videosData.items.length === 0) {
+      console.log("No video details found");
+      return [];
+    }
+    
+    // Extract video information for keyword generation
+    const videoInfo = videosData.items.map((video: any) => ({
+      title: video.snippet.title,
+      description: video.snippet.description,
+      tags: video.snippet.tags
+    }));
+    
+    // Step 1.2: Extract keywords from videos
+    console.log("Step 1.2: Extracting keywords from videos");
+    const keywords = await extractKeywordsFromVideos(videoInfo);
+    console.log(`Generated ${keywords.length} keywords:`, keywords);
+    
+    if (keywords.length === 0) {
+      console.log("No keywords generated, returning empty array");
+      return [];
+    }
+    
+    // Step 2: Search videos by topic keywords and collect channels
+    console.log("Step 2: Searching videos by topic keywords");
+    const channelFrequencyMap: Record<string, { count: number, title: string }> = {};
+    
+    // Limit to 5 keywords to reduce API calls
+    const keywordsToUse = keywords.slice(0, 5);
+    
+    for (const keyword of keywordsToUse) {
+      console.log(`Searching for keyword: ${keyword}`);
+      const channels = await searchVideosByKeyword(keyword, 20);
+      
+      // Update frequency map
+      channels.forEach(channel => {
+        // Skip the seed channel
+        if (channel.channelId === channelId) return;
+        
+        if (channelFrequencyMap[channel.channelId]) {
+          channelFrequencyMap[channel.channelId].count += 1;
+        } else {
+          channelFrequencyMap[channel.channelId] = {
+            count: 1,
+            title: channel.channelTitle
+          };
+        }
+      });
+    }
+    
+    // Step 3: Rank and deduplicate channels
+    console.log("Step 3: Ranking and deduplicating channels");
+    const rankedChannels = Object.entries(channelFrequencyMap)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 20) // Take top 20 channels
+      .map(([id, info]) => ({
+        id,
+        title: info.title,
+        matchFrequency: info.count
+      }));
+    
+    console.log(`Found ${rankedChannels.length} ranked channels`);
+    
+    if (rankedChannels.length === 0) {
+      console.log("No ranked channels found, returning empty array");
+      return [];
+    }
+    
+    // Step 4: Fetch metadata for top channels
+    console.log("Step 4: Fetching metadata for top channels");
+    const channelIds = rankedChannels.map(channel => channel.id);
+    const channelsInfo = await getChannelsInfo(channelIds);
+    
+    // Merge frequency data with channel info and filter by subscriber count
+    const result = channelsInfo
+      .map(channel => {
+        const rankInfo = rankedChannels.find(rank => rank.id === channel.id);
+        return {
+          ...channel,
+          matchFrequency: rankInfo?.matchFrequency || 0
+        };
+      })
+      .filter(channel => {
+        const subCount = parseInt(channel.subscriberCount, 10);
+        return subCount >= minSubscribers && subCount <= maxSubscribers;
+      })
+      .sort((a, b) => b.matchFrequency - a.matchFrequency);
+    
+    console.log(`Final result: ${result.length} channels after filtering`);
+    return result;
+  } catch (error) {
+    console.error('Error finding related channels:', error);
+    return [];
+  }
+}
+
+/**
+ * Get channel information for a list of channel IDs
+ * 
+ * API Documentation:
+ * Endpoint: GET https://www.googleapis.com/youtube/v3/channels
+ * Parameters:
+ *   - part=snippet,statistics
+ *   - id={comma_separated_channel_ids}
+ *   - key={API_KEY}
+ * 
+ * Quota Cost: 1 unit per request
+ */
+export async function getChannelsInfo(channelIds: string[]): Promise<RelatedChannel[]> {
+  try {
+    // Check if API key is available
+    if (!API_KEY) {
+      console.error('YouTube API key is not available. Please set NEXT_PUBLIC_YOUTUBE_API_KEY in your environment variables.');
+      return [];
+    }
+
+    // Remove duplicates and limit to 50 (API limit)
+    const uniqueIds = [...new Set(channelIds)].slice(0, 50);
+    
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${uniqueIds.join(',')}&key=${API_KEY}`;
+    const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('YouTube API error (channels):', errorData);
+      return [];
+    }
+    
+    const data = await response.json();
+    
+    if (!data.items || data.items.length === 0) {
+      console.error('No channel information found');
+      return [];
+    }
+    
+    // Format channel data
+    return data.items.map((channel: {
+      id: string;
+      snippet: {
+        title: string;
+        description: string;
+        customUrl?: string;
+        thumbnails: {
+          default?: { url: string };
+          medium?: { url: string };
+          high?: { url: string };
+        };
+      };
+      statistics: {
+        subscriberCount?: string;
+        videoCount?: string;
+        viewCount?: string;
+      };
+    }) => ({
+      id: channel.id,
+      title: channel.snippet.title,
+      description: channel.snippet.description,
+      customUrl: channel.snippet.customUrl || '',
+      thumbnails: {
+        default: channel.snippet.thumbnails.default?.url || '',
+        medium: channel.snippet.thumbnails.medium?.url || '',
+        high: channel.snippet.thumbnails.high?.url || '',
+      },
+      subscriberCount: channel.statistics.subscriberCount || '0',
+      videoCount: channel.statistics.videoCount || '0',
+      viewCount: channel.statistics.viewCount || '0',
+      matchFrequency: 0, // Will be updated later
+    }));
+  } catch (error) {
+    console.error('Error fetching channels info:', error);
+    return [];
+  }
+}
+
+/**
+ * Generate mock related channels data for testing and fallback
+ */
+export function getMockRelatedChannels(): RelatedChannel[] {
+  return [
+    {
+      id: "mock-channel-1",
+      title: "Gaming Enthusiast",
+      description: "I create gaming content focused on strategy games and RPGs. Join me for walkthroughs, tips, and gaming news!",
+      customUrl: "gamingenthusiast",
+      thumbnails: {
+        default: "https://via.placeholder.com/88",
+        medium: "https://via.placeholder.com/240",
+        high: "https://via.placeholder.com/800"
+      },
+      subscriberCount: "1250000",
+      videoCount: "342",
+      viewCount: "75000000",
+      matchFrequency: 5
+    },
+    {
+      id: "mock-channel-2",
+      title: "Tech Reviews Pro",
+      description: "The latest tech reviews, unboxings, and comparisons. I help you make informed decisions about your tech purchases.",
+      customUrl: "techreviewspro",
+      thumbnails: {
+        default: "https://via.placeholder.com/88",
+        medium: "https://via.placeholder.com/240",
+        high: "https://via.placeholder.com/800"
+      },
+      subscriberCount: "3500000",
+      videoCount: "512",
+      viewCount: "245000000",
+      matchFrequency: 4
+    },
+    {
+      id: "mock-channel-3",
+      title: "Creative Tutorials",
+      description: "Learn creative skills from an experienced designer. Tutorials on graphic design, illustration, and digital art.",
+      customUrl: "creativetutorials",
+      thumbnails: {
+        default: "https://via.placeholder.com/88",
+        medium: "https://via.placeholder.com/240",
+        high: "https://via.placeholder.com/800"
+      },
+      subscriberCount: "780000",
+      videoCount: "215",
+      viewCount: "35000000",
+      matchFrequency: 3
+    }
+  ];
 } 

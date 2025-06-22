@@ -8,6 +8,7 @@ import { getChannels, updateChannel, YouTubeChannel } from "@/lib/youtube";
 import { fetchChannelInfo } from "@/lib/youtube-api";
 import ChannelsList from "@/components/ChannelsList";
 import RecentVideos from "@/components/RecentVideos";
+import RelatedChannels from "@/components/RelatedChannels";
 
 export default function Dashboard() {
   const { user, isLoading: authLoading } = useAuth();
@@ -144,23 +145,8 @@ export default function Dashboard() {
             <RecentVideos />
           </div>
         );
-      case "analytics":
-        return (
-          <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
-              Analytics
-            </h3>
-            <p className="text-gray-600 dark:text-gray-300">
-              View detailed analytics for your content. This feature will be
-              available soon.
-            </p>
-            <div className="mt-6 p-4 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                Analytics data will appear here
-              </p>
-            </div>
-          </div>
-        );
+      case "related-channels":
+        return <RelatedChannels />;
       case "ideas":
         return (
           <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
@@ -233,9 +219,9 @@ export default function Dashboard() {
             Overview
           </button>
           <button
-            onClick={() => setActiveTab("analytics")}
+            onClick={() => setActiveTab("related-channels")}
             className={`${
-              activeTab === "analytics"
+              activeTab === "related-channels"
                 ? "border-primary text-primary"
                 : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
             } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
@@ -246,7 +232,7 @@ export default function Dashboard() {
               } as React.CSSProperties
             }
           >
-            Analytics
+            Related Channels
           </button>
           <button
             onClick={() => setActiveTab("ideas")}

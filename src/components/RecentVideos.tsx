@@ -37,6 +37,7 @@ export default function RecentVideos() {
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [channels, setChannels] = useState<{ id: string; title: string }[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
 
   // Calculate default date for custom date picker (30 days ago)
   useEffect(() => {
@@ -229,18 +230,47 @@ export default function RecentVideos() {
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-3 sm:mb-0">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2 md:mb-0">
           Last 50 Uploads
         </h3>
 
-        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+        {/* Mobile Filter Toggle Button */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className="md:hidden flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+        >
+          <span>Filters</span>
+          <svg
+            className={`ml-2 w-4 h-4 transition-transform ${
+              showFilters ? "rotate-180" : ""
+            }`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Filter Controls Container - Updated for better layout */}
+      <div className={`mb-6 ${showFilters ? "block" : "hidden md:block"}`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
           {/* Channel Filter */}
-          <div className="relative">
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Channel
+            </label>
             <select
               value={filterBy}
               onChange={(e) => setFilterBy(e.target.value)}
-              className="block w-full sm:w-44 pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+              className="block w-full pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
               style={
                 {
                   "--ring-primary": "var(--primary)",
@@ -257,12 +287,15 @@ export default function RecentVideos() {
             </select>
           </div>
 
-          {/* Sort By */}
-          <div className="relative">
+          {/* Sort By Filter */}
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Sort By
+            </label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="block w-full sm:w-44 pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+              className="block w-full pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
               style={
                 {
                   "--ring-primary": "var(--primary)",
@@ -274,39 +307,40 @@ export default function RecentVideos() {
               <option value="views">Most Viewed</option>
             </select>
           </div>
-        </div>
-      </div>
 
-      {/* Date Range Filter */}
-      <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
-        <div className="relative w-full sm:w-auto">
-          <select
-            value={dateRange}
-            onChange={handleDateRangeChange}
-            className="block w-full sm:w-44 pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-            style={
-              {
-                "--ring-primary": "var(--primary)",
-                "--border-primary": "var(--primary)",
-              } as React.CSSProperties
-            }
-          >
-            <option value="all">All Time</option>
-            <option value="week">Last 7 Days</option>
-            <option value="month">Last 30 Days</option>
-            <option value="3months">Last 3 Months</option>
-            <option value="6months">Last 6 Months</option>
-            <option value="year">Last Year</option>
-            <option value="custom">Custom Date Range</option>
-          </select>
+          {/* Date Range Filter */}
+          <div>
+            <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">
+              Time Period
+            </label>
+            <select
+              value={dateRange}
+              onChange={handleDateRangeChange}
+              className="block w-full pl-3 pr-10 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+              style={
+                {
+                  "--ring-primary": "var(--primary)",
+                  "--border-primary": "var(--primary)",
+                } as React.CSSProperties
+              }
+            >
+              <option value="all">All Time</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="3months">Last 3 Months</option>
+              <option value="6months">Last 6 Months</option>
+              <option value="year">Last Year</option>
+              <option value="custom">Custom Date Range</option>
+            </select>
+          </div>
         </div>
 
-        {/* Custom Date Picker */}
+        {/* Custom Date Picker - Full width when visible */}
         {showCustomDatePicker && (
-          <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-3 mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
             <label
               htmlFor="startDate"
-              className="text-sm text-gray-600 dark:text-gray-400"
+              className="whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400"
             >
               From:
             </label>
@@ -316,7 +350,7 @@ export default function RecentVideos() {
               value={customStartDate}
               onChange={(e) => setCustomStartDate(e.target.value)}
               max={new Date().toISOString().split("T")[0]}
-              className="block w-full sm:w-auto pl-3 pr-3 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+              className="flex-grow min-w-[200px] pl-3 pr-3 py-2 text-sm text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
               style={
                 {
                   "--ring-primary": "var(--primary)",
@@ -324,7 +358,7 @@ export default function RecentVideos() {
                 } as React.CSSProperties
               }
             />
-            <span className="text-sm text-gray-600 dark:text-gray-400">
+            <span className="whitespace-nowrap text-sm font-medium text-gray-600 dark:text-gray-400">
               to Today
             </span>
           </div>
@@ -373,7 +407,7 @@ export default function RecentVideos() {
                   <div>{formatDate(video.publishedAt)}</div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[60%]">
                     {video.channelTitle}
                   </span>
                   <div className="flex items-center text-xs text-gray-500 dark:text-gray-400">
