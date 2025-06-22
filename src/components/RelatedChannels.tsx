@@ -591,6 +591,11 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
                                   src={youtubeChannel.thumbnailUrl}
                                   alt={`${channel.channelName} thumbnail`}
                                   className="h-10 w-10 rounded-full"
+                                  onError={(e) => {
+                                    // Replace with default image on error
+                                    e.currentTarget.src =
+                                      "https://via.placeholder.com/40";
+                                  }}
                                 />
                               </div>
                               <div className="flex flex-col">
