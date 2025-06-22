@@ -332,7 +332,7 @@ export default function ContentIdeas() {
                         Generating Script...
                       </>
                     ) : (
-                      "Generate Script"
+                      "Analyse & Generate Script"
                     )}
                   </button>
                 </div>
