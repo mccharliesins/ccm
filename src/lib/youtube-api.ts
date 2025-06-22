@@ -407,10 +407,10 @@ export async function extractKeywordsFromVideos(videos: {
   tags?: string[];
 }[]): Promise<string[]> {
   try {
-    const ANTHROPIC_API_KEY = process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY;
+    const GEMINI_API_KEY = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     
-    if (!ANTHROPIC_API_KEY) {
-      console.error('Anthropic API key is not available');
+    if (!GEMINI_API_KEY) {
+      console.error('Gemini API key is not available');
       
       // Fallback: Extract basic keywords from video data
       const allKeywords = new Set<string>();
@@ -434,7 +434,7 @@ export async function extractKeywordsFromVideos(videos: {
       return Array.from(allKeywords).slice(0, 10);
     }
 
-    // Prepare the prompt for Claude
+    // Prepare the prompt for Gemini
     const videoData = videos.map((video, i) => `
 Video ${i + 1}:
 Title: ${video.title}
@@ -456,29 +456,33 @@ query one, query two, query three, etc.
 Only include the comma-separated list in your response, nothing else.
 `;
 
-    // Call Claude API
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    // Call Gemini API
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_API_KEY,
-        'anthropic-version': '2023-06-01'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: 'claude-3-sonnet-20240229',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ]
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Claude API error:', errorData);
+      console.error('Gemini API error:', errorData);
       return [];
     }
 
     const data = await response.json();
-    const content = data.content[0].text.trim();
+    const content = data.candidates[0].content.parts[0].text.trim();
     
     // Split by commas and trim each keyword
     const keywords = content.split(',').map((keyword: string) => keyword.trim());
@@ -519,9 +523,9 @@ export async function searchVideosByKeyword(keyword: string, maxResults: number 
     
     // Extract channel IDs and titles
     return data.items.map((item: {snippet: {channelId: string, channelTitle: string}}) => ({
-      channelId: item.snippet.channelId,
-      channelTitle: item.snippet.channelTitle
-    }));
+        channelId: item.snippet.channelId,
+        channelTitle: item.snippet.channelTitle
+      }));
   } catch (error) {
     console.error(`Error searching videos by keyword "${keyword}":`, error);
     return [];
@@ -537,7 +541,7 @@ export async function searchVideosByKeyword(keyword: string, maxResults: number 
  * @returns Array of related channels with detailed information
  */
 export async function findRelatedChannels(
-  channelId: string,
+  channelId: string, 
   minSubscribers: number = 10000,
   maxSubscribers: number = 500000
 ): Promise<RelatedChannel[]> {
@@ -579,7 +583,7 @@ export async function findRelatedChannels(
         description: string;
         tags?: string[];
       }
-    }) => ({
+            }) => ({
       title: video.snippet.title,
       description: video.snippet.description,
       tags: video.snippet.tags
@@ -592,7 +596,7 @@ export async function findRelatedChannels(
     
     if (keywords.length === 0) {
       console.log("No keywords generated, returning empty array");
-      return [];
+    return [];
     }
     
     // Step 2: Search videos by topic keywords and collect channels
@@ -615,11 +619,11 @@ export async function findRelatedChannels(
           channelFrequencyMap[channel.channelId].count += 1;
         } else {
           channelFrequencyMap[channel.channelId] = {
-            count: 1,
-            title: channel.channelTitle
-          };
+        count: 1, 
+        title: channel.channelTitle 
+      };
         }
-      });
+    });
     }
     
     // Step 3: Rank and deduplicate channels
@@ -650,7 +654,7 @@ export async function findRelatedChannels(
       .map(channel => {
         const rankInfo = rankedChannels.find(rank => rank.id === channel.id);
         return {
-          ...channel,
+      ...channel,
           matchFrequency: rankInfo?.matchFrequency || 0
         };
       })
@@ -697,13 +701,13 @@ export async function getChannelsInfo(channelIds: string[]): Promise<RelatedChan
 
     const apiUrl = `https://www.googleapis.com/youtube/v3/channels?part=snippet,statistics&id=${uniqueIds.join(',')}&key=${API_KEY}`;
     const response = await fetch(apiUrl);
-    
+
     if (!response.ok) {
       const errorData = await response.json();
       console.error('YouTube API error (channels):', errorData);
       return [];
     }
-    
+
     const data = await response.json();
     
     if (!data.items || data.items.length === 0) {
