@@ -76,7 +76,7 @@ export default function Dashboard() {
     );
   }
 
-  // If not authenticated and not loading, don't render the dashboard content
+  // If not authenticated  and not loading, don't render the dashboard content
   if (!user) {
     return null;
   }
