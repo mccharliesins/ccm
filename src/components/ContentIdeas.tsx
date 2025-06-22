@@ -23,9 +23,6 @@ export default function ContentIdeas() {
   >([]);
   const [relatedChannels, setRelatedChannels] = useState<RelatedChannel[]>([]);
   const [numIdeas, setNumIdeas] = useState(5);
-  const [analysisMode, setAnalysisMode] = useState<"basic" | "enhanced">(
-    "enhanced"
-  );
   const [generatingScriptFor, setGeneratingScriptFor] = useState<number | null>(
     null
   );
@@ -89,37 +86,20 @@ export default function ContentIdeas() {
     setScripts({});
 
     try {
-      if (analysisMode === "basic") {
-        // Use the basic content ideas generation
-        const ideas = await generateContentIdeas(
-          relatedChannels,
-          selectedChannelId,
-          numIdeas
-        );
+      // Use the enhanced content ideas generation
+      const similarChannelIds = relatedChannels
+        .slice(0, 5)
+        .map((channel) => channel.id);
 
-        setContentIdeas(ideas);
+      const ideas = await generateEnhancedContentIdeas(
+        selectedChannelId,
+        similarChannelIds
+      );
 
-        if (ideas.length === 0) {
-          setError("Could not generate content ideas. Try again later.");
-        }
-      } else {
-        // Use the enhanced content ideas generation
-        const similarChannelIds = relatedChannels
-          .slice(0, 5)
-          .map((channel) => channel.id);
+      setEnhancedIdeas(ideas);
 
-        const ideas = await generateEnhancedContentIdeas(
-          selectedChannelId,
-          similarChannelIds
-        );
-
-        setEnhancedIdeas(ideas);
-
-        if (ideas.length === 0) {
-          setError(
-            "Could not generate enhanced content ideas. Try again later."
-          );
-        }
+      if (ideas.length === 0) {
+        setError("Could not generate enhanced content ideas. Try again later.");
       }
     } catch (error) {
       console.error("Error generating content ideas:", error);
@@ -200,47 +180,25 @@ export default function ContentIdeas() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div>
-            <label
-              htmlFor="channel-select"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Select your channel:
-            </label>
-            <select
-              id="channel-select"
-              value={selectedChannelId}
-              onChange={(e) => setSelectedChannelId(e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              {userChannels.map((channel) => (
-                <option key={channel.id} value={channel.id}>
-                  {channel.title}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label
-              htmlFor="analysis-mode"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Analysis mode:
-            </label>
-            <select
-              id="analysis-mode"
-              value={analysisMode}
-              onChange={(e) =>
-                setAnalysisMode(e.target.value as "basic" | "enhanced")
-              }
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-            >
-              <option value="enhanced">Enhanced Analysis (Recommended)</option>
-              <option value="basic">Basic Analysis</option>
-            </select>
-          </div>
+        <div className="mb-6">
+          <label
+            htmlFor="channel-select"
+            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+          >
+            Select your channel:
+          </label>
+          <select
+            id="channel-select"
+            value={selectedChannelId}
+            onChange={(e) => setSelectedChannelId(e.target.value)}
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          >
+            {userChannels.map((channel) => (
+              <option key={channel.id} value={channel.id}>
+                {channel.title}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex justify-center">
