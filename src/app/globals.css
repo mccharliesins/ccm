@@ -3,6 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --primary: #1d4ed8; /* Blue-700 */
+  --primary-hover: #1e40af; /* Blue-800 */
+  --primary-light: #dbeafe; /* Blue-50 */
+  --primary-text: #1d4ed8; /* Blue-700 */
+  --secondary: #4b5563; /* Gray-600 */
+  --accent: #8b5cf6; /* Purple-500 */
+  --accent-light: #f5f3ff; /* Purple-50 */
+  --success: #10b981; /* Green-500 */
+  --success-light: #ecfdf5; /* Green-50 */
 }
 
 @theme inline {
@@ -16,6 +25,9 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --primary-light: #1e3a8a; /* Blue-900 */
+    --success-light: #064e3b; /* Green-900 */
+    --accent-light: #4c1d95; /* Purple-900 */
   }
 }
 

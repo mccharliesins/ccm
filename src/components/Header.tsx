@@ -9,11 +9,15 @@ export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="bg-white shadow-md">
+    <header className="bg-white dark:bg-gray-900 shadow-md">
       <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center">
-            <Link href="/" className="text-xl font-bold text-blue-600">
+            <Link
+              href="/"
+              className="text-xl font-bold"
+              style={{ color: "var(--primary)" }}
+            >
               Creator Climb
             </Link>
           </div>
@@ -22,7 +26,7 @@ export default function Header() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-700 focus:outline-none"
+              className="text-gray-700 dark:text-gray-300 focus:outline-none"
             >
               <svg
                 className="h-6 w-6"
@@ -51,12 +55,21 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-6">
-            <Link href="/" className="text-gray-700 hover:text-blue-600">
+            <Link
+              href="/"
+              className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100"
+              style={
+                { "--text-primary": "var(--primary)" } as React.CSSProperties
+              }
+            >
               Home
             </Link>
             <Link
               href="/dashboard"
-              className="text-gray-700 hover:text-blue-600"
+              className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100"
+              style={
+                { "--text-primary": "var(--primary)" } as React.CSSProperties
+              }
             >
               Dashboard
             </Link>
@@ -64,13 +77,24 @@ export default function Header() {
               <>
                 <Link
                   href="/settings"
-                  className="text-gray-700 hover:text-blue-600"
+                  className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100"
+                  style={
+                    {
+                      "--text-primary": "var(--primary)",
+                    } as React.CSSProperties
+                  }
                 >
                   Settings
                 </Link>
                 <button
                   onClick={logout}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  style={
+                    {
+                      backgroundColor: "var(--primary)",
+                      "--hover-bg": "var(--primary-hover)",
+                    } as React.CSSProperties
+                  }
+                  className="text-white px-4 py-2 rounded-md hover:bg-[var(--hover-bg)]"
                 >
                   Logout
                 </button>
@@ -79,13 +103,26 @@ export default function Header() {
               <div className="flex space-x-2">
                 <Link
                   href="/login"
-                  className="border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-50"
+                  style={
+                    {
+                      color: "var(--primary)",
+                      borderColor: "var(--primary)",
+                      "--hover-bg": "var(--primary-light)",
+                    } as React.CSSProperties
+                  }
+                  className="border px-4 py-2 rounded-md hover:bg-[var(--hover-bg)]"
                 >
                   Login
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                  style={
+                    {
+                      backgroundColor: "var(--primary)",
+                      "--hover-bg": "var(--primary-hover)",
+                    } as React.CSSProperties
+                  }
+                  className="text-white px-4 py-2 rounded-md hover:bg-[var(--hover-bg)]"
                 >
                   Sign Up
                 </Link>
@@ -100,14 +137,20 @@ export default function Header() {
             <div className="flex flex-col space-y-3">
               <Link
                 href="/"
-                className="text-gray-700 hover:text-blue-600 py-2"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100 py-2"
+                style={
+                  { "--text-primary": "var(--primary)" } as React.CSSProperties
+                }
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
                 href="/dashboard"
-                className="text-gray-700 hover:text-blue-600 py-2"
+                className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100 py-2"
+                style={
+                  { "--text-primary": "var(--primary)" } as React.CSSProperties
+                }
                 onClick={() => setIsMenuOpen(false)}
               >
                 Dashboard
@@ -116,7 +159,12 @@ export default function Header() {
                 <>
                   <Link
                     href="/settings"
-                    className="text-gray-700 hover:text-blue-600 py-2"
+                    className="text-gray-700 dark:text-gray-300 hover:text-primary hover:text-opacity-100 py-2"
+                    style={
+                      {
+                        "--text-primary": "var(--primary)",
+                      } as React.CSSProperties
+                    }
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Settings
@@ -126,7 +174,13 @@ export default function Header() {
                       logout();
                       setIsMenuOpen(false);
                     }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-left"
+                    style={
+                      {
+                        backgroundColor: "var(--primary)",
+                        "--hover-bg": "var(--primary-hover)",
+                      } as React.CSSProperties
+                    }
+                    className="text-white px-4 py-2 rounded-md hover:bg-[var(--hover-bg)] text-left"
                   >
                     Logout
                   </button>
@@ -135,14 +189,27 @@ export default function Header() {
                 <div className="flex flex-col space-y-2">
                   <Link
                     href="/login"
-                    className="border border-blue-600 text-blue-600 px-4 py-2 rounded-md hover:bg-blue-50 text-center"
+                    style={
+                      {
+                        color: "var(--primary)",
+                        borderColor: "var(--primary)",
+                        "--hover-bg": "var(--primary-light)",
+                      } as React.CSSProperties
+                    }
+                    className="border px-4 py-2 rounded-md hover:bg-[var(--hover-bg)] text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login
                   </Link>
                   <Link
                     href="/signup"
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 text-center"
+                    style={
+                      {
+                        backgroundColor: "var(--primary)",
+                        "--hover-bg": "var(--primary-hover)",
+                      } as React.CSSProperties
+                    }
+                    className="text-white px-4 py-2 rounded-md hover:bg-[var(--hover-bg)] text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up

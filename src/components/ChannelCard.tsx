@@ -25,21 +25,23 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
 
   if (!channelInfo) {
     return (
-      <div className="bg-white rounded-lg shadow p-4 mb-4 border border-gray-200">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-4 border border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
+            <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
             <div className="ml-3">
-              <p className="font-medium text-gray-800">
+              <p className="font-medium text-gray-800 dark:text-gray-200">
                 Loading channel info...
               </p>
-              <p className="text-sm text-gray-500 truncate">{channel.url}</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                {channel.url}
+              </p>
             </div>
           </div>
           {onRemove && (
             <button
               onClick={() => onRemove(channel.id)}
-              className="text-red-600 hover:text-red-800 text-sm"
+              className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 text-sm"
             >
               Remove
             </button>
@@ -56,10 +58,10 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
     : null;
 
   return (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden mb-4 border border-gray-200">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-4 border border-gray-200 dark:border-gray-700">
       {/* Banner */}
       {channelInfo.bannerUrl && (
-        <div className="relative w-full h-24 bg-gray-200">
+        <div className="relative w-full h-24 bg-gray-200 dark:bg-gray-700">
           <Image
             src={channelInfo.bannerUrl}
             alt={`${channelInfo.title} banner`}
@@ -74,7 +76,7 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
         <div className="flex items-start justify-between">
           {/* Channel Info */}
           <div className="flex">
-            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white shadow-sm">
+            <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-white dark:border-gray-700 shadow-sm">
               <Image
                 src={
                   channelInfo.thumbnails.medium ||
@@ -87,17 +89,22 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
             </div>
 
             <div className="ml-4">
-              <h3 className="font-bold text-lg text-gray-900">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-gray-100">
                 <a
                   href={channelUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-blue-600"
+                  className="hover:text-primary"
+                  style={
+                    {
+                      "--text-primary": "var(--primary)",
+                    } as React.CSSProperties
+                  }
                 >
                   {channelInfo.title}
                 </a>
               </h3>
-              <div className="flex items-center text-sm text-gray-500 mt-1">
+              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {channelInfo.customUrl && (
                   <span className="mr-3">@{channelInfo.customUrl}</span>
                 )}
@@ -107,7 +114,7 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
                 </span>
                 <span>{channelInfo.videoCount} videos</span>
               </div>
-              <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 line-clamp-2">
                 {channelInfo.description}
               </p>
 
@@ -117,7 +124,8 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
                   href={channelUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700"
+                  style={{ backgroundColor: "#FF0000" }} // YouTube red
+                  className="text-xs text-white px-2 py-1 rounded hover:bg-red-700"
                 >
                   Visit Channel
                 </a>
@@ -140,7 +148,7 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
             {onRemove && (
               <button
                 onClick={() => onRemove(channel.id)}
-                className="text-red-600 hover:text-red-800 text-sm ml-2"
+                className="text-red-600 hover:text-red-800 dark:text-red-500 dark:hover:text-red-400 text-sm ml-2"
               >
                 Remove
               </button>
