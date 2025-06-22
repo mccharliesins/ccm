@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import {
   RelatedChannel,
   ContentIdea,
   generateContentIdeas,
   EnhancedContentIdea,
   generateEnhancedContentIdeas,
+  generateVideoScript,
 } from "@/lib/youtube-api";
 import { getChannels } from "@/lib/youtube";
 
@@ -24,6 +26,10 @@ export default function ContentIdeas() {
   const [analysisMode, setAnalysisMode] = useState<"basic" | "enhanced">(
     "enhanced"
   );
+  const [generatingScriptFor, setGeneratingScriptFor] = useState<number | null>(
+    null
+  );
+  const [scripts, setScripts] = useState<Record<number, string>>({});
 
   // Load user channels
   useEffect(() => {
@@ -80,6 +86,7 @@ export default function ContentIdeas() {
     setError(null);
     setContentIdeas([]);
     setEnhancedIdeas([]);
+    setScripts({});
 
     try {
       if (analysisMode === "basic") {
@@ -122,6 +129,47 @@ export default function ContentIdeas() {
     }
   };
 
+  // Function to generate a script for a specific idea
+  const handleGenerateScript = async (index: number, isEnhanced: boolean) => {
+    try {
+      setGeneratingScriptFor(index);
+
+      // Get the selected channel info
+      const selectedChannel = userChannels.find(
+        (channel) => channel.id === selectedChannelId
+      );
+      if (!selectedChannel) {
+        throw new Error("Selected channel not found");
+      }
+
+      // Get the idea details
+      const idea = isEnhanced ? enhancedIdeas[index] : contentIdeas[index];
+      if (!idea) {
+        throw new Error("Content idea not found");
+      }
+
+      // Generate the script
+      const channelUrl = `https://youtube.com/channel/${selectedChannelId}`;
+      const script = await generateVideoScript(
+        selectedChannel.title,
+        channelUrl,
+        idea.title,
+        isEnhanced ? idea.description : idea.description
+      );
+
+      // Store the generated script
+      setScripts((prev) => ({
+        ...prev,
+        [index]: script,
+      }));
+    } catch (error) {
+      console.error("Error generating script:", error);
+      setError("Failed to generate script. Please try again later.");
+    } finally {
+      setGeneratingScriptFor(null);
+    }
+  };
+
   if (userChannels.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
@@ -146,25 +194,25 @@ export default function ContentIdeas() {
           Generate Content Ideas
         </h3>
 
+        {error && (
+          <div className="bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-4 rounded-md mb-4">
+            {error}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <div>
             <label
-              htmlFor="channelSelect"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              htmlFor="channel-select"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
               Select your channel:
             </label>
             <select
-              id="channelSelect"
+              id="channel-select"
               value={selectedChannelId}
               onChange={(e) => setSelectedChannelId(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-              style={
-                {
-                  "--ring-primary": "var(--primary)",
-                  "--border-primary": "var(--primary)",
-                } as React.CSSProperties
-              }
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               {userChannels.map((channel) => (
                 <option key={channel.id} value={channel.id}>
@@ -176,24 +224,18 @@ export default function ContentIdeas() {
 
           <div>
             <label
-              htmlFor="analysisMode"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+              htmlFor="analysis-mode"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
             >
               Analysis mode:
             </label>
             <select
-              id="analysisMode"
+              id="analysis-mode"
               value={analysisMode}
               onChange={(e) =>
                 setAnalysisMode(e.target.value as "basic" | "enhanced")
               }
-              className="block w-full pl-3 pr-10 py-2 text-base text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-              style={
-                {
-                  "--ring-primary": "var(--primary)",
-                  "--border-primary": "var(--primary)",
-                } as React.CSSProperties
-              }
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
             >
               <option value="enhanced">Enhanced Analysis (Recommended)</option>
               <option value="basic">Basic Analysis</option>
@@ -240,28 +282,7 @@ export default function ContentIdeas() {
             )}
           </button>
         </div>
-
-        {relatedChannels.length === 0 && (
-          <div className="mt-4 text-center">
-            <p className="text-amber-600 dark:text-amber-400">
-              You need to find related channels first before generating content
-              ideas.
-            </p>
-            <a
-              href="/dashboard"
-              className="inline-flex items-center px-3 py-1.5 mt-2 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500"
-            >
-              Find Related Channels
-            </a>
-          </div>
-        )}
       </div>
-
-      {error && (
-        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 text-center">
-          <p className="text-red-600 dark:text-red-400">{error}</p>
-        </div>
-      )}
 
       {/* Enhanced Content Ideas */}
       {enhancedIdeas.length > 0 && (
@@ -321,6 +342,60 @@ export default function ContentIdeas() {
                     </p>
                   </div>
                 </div>
+
+                <div className="mt-4">
+                  <button
+                    onClick={() => handleGenerateScript(index, true)}
+                    disabled={generatingScriptFor === index}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                      generatingScriptFor === index
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    }`}
+                  >
+                    {generatingScriptFor === index ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Generating Script...
+                      </>
+                    ) : (
+                      "Generate Script"
+                    )}
+                  </button>
+                </div>
+
+                {/* Display generated script if available */}
+                {scripts[index] && (
+                  <div className="mt-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
+                    <h5 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">
+                      Generated Script
+                    </h5>
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
+                      <div className="text-base text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 p-6 rounded overflow-auto max-h-[600px] font-outfit markdown-content">
+                        <ReactMarkdown>{scripts[index]}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -412,6 +487,60 @@ export default function ContentIdeas() {
                     </span>
                   </div>
                 </div>
+
+                <div className="mt-4">
+                  <button
+                    onClick={() => handleGenerateScript(index, false)}
+                    disabled={generatingScriptFor === index}
+                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                      generatingScriptFor === index
+                        ? "bg-gray-400 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    }`}
+                  >
+                    {generatingScriptFor === index ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Generating Script...
+                      </>
+                    ) : (
+                      "Generate Script"
+                    )}
+                  </button>
+                </div>
+
+                {/* Display generated script if available */}
+                {scripts[index] && (
+                  <div className="mt-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
+                    <h5 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">
+                      Generated Script
+                    </h5>
+                    <div className="prose prose-lg dark:prose-invert max-w-none">
+                      <div className="text-base text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 p-6 rounded overflow-auto max-h-[600px] font-outfit markdown-content">
+                        <ReactMarkdown>{scripts[index]}</ReactMarkdown>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>

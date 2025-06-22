@@ -106,6 +106,9 @@ export type RelatedChannel = {
 export function extractChannelId(url: string): string | null {
   console.log("Extracting channel ID from URL:", url);
 
+  // Handle null or empty URL
+  if (!url) return null;
+
   // Handle direct URLs
   if (url.startsWith('@')) {
     console.log("Found handle format (direct):", url);
@@ -115,7 +118,7 @@ export function extractChannelId(url: string): string | null {
   // Handle channel URLs
   const channelRegex = /youtube\.com\/channel\/([^\/\?]+)/;
   const channelMatch = url.match(channelRegex);
-  if (channelMatch) {
+  if (channelMatch && channelMatch[1]) {
     console.log("Found channel ID format:", channelMatch[1]);
     return channelMatch[1];
   }
@@ -123,7 +126,7 @@ export function extractChannelId(url: string): string | null {
   // Handle user URLs
   const userRegex = /youtube\.com\/user\/([^\/\?]+)/;
   const userMatch = url.match(userRegex);
-  if (userMatch) {
+  if (userMatch && userMatch[1]) {
     console.log("Found user format:", userMatch[1]);
     return userMatch[1];
   }
@@ -131,7 +134,7 @@ export function extractChannelId(url: string): string | null {
   // Handle handle URLs (new @username format)
   const handleRegex = /youtube\.com\/@([^\/\?]+)/;
   const handleMatch = url.match(handleRegex);
-  if (handleMatch) {
+  if (handleMatch && handleMatch[1]) {
     console.log("Found handle format:", '@' + handleMatch[1]);
     return '@' + handleMatch[1];
   }
@@ -139,7 +142,7 @@ export function extractChannelId(url: string): string | null {
   // Handle c/ URLs
   const cRegex = /youtube\.com\/c\/([^\/\?]+)/;
   const cMatch = url.match(cRegex);
-  if (cMatch) {
+  if (cMatch && cMatch[1]) {
     console.log("Found c/ format:", cMatch[1]);
     return cMatch[1];
   }
@@ -147,7 +150,7 @@ export function extractChannelId(url: string): string | null {
   // Handle youtu.be short URLs
   const shortRegex = /youtu\.be\/([^\/\?]+)/;
   const shortMatch = url.match(shortRegex);
-  if (shortMatch) {
+  if (shortMatch && shortMatch[1]) {
     console.log("Found youtu.be format:", shortMatch[1]);
     return shortMatch[1];
   }
@@ -355,6 +358,9 @@ export async function fetchChannelVideos(uploadsPlaylistId: string): Promise<You
  * Example: PT1H30M15S -> 1:30:15
  */
 export function formatDuration(isoDuration: string): string {
+  // Handle null or undefined input
+  if (!isoDuration) return '0:00';
+  
   const match = isoDuration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
   if (!match) return '0:00';
   
@@ -374,6 +380,9 @@ export function formatDuration(isoDuration: string): string {
  * Example: 1000000 -> 1M
  */
 export function formatViewCount(viewCount: string): string {
+  // Handle null or undefined input
+  if (!viewCount) return '0 views';
+  
   const count = parseInt(viewCount);
   if (isNaN(count)) return '0 views';
   
@@ -716,7 +725,7 @@ Please provide the output in CSV format.
       
       // Try to extract CSV from code blocks if present
       const csvMatch = content.match(/```(?:csv)?\s*([\s\S]*?)```/);
-      if (csvMatch) {
+      if (csvMatch && csvMatch[1]) {
         csvContent = csvMatch[1].trim();
       }
       
@@ -946,7 +955,7 @@ Please provide the output in CSV format.
     
     // Try to extract CSV from code blocks if present
     const csvMatch = content.match(/```(?:csv)?\s*([\s\S]*?)```/);
-    if (csvMatch) {
+    if (csvMatch && csvMatch[1]) {
       csvContent = csvMatch[1].trim();
     }
     
@@ -1802,5 +1811,97 @@ function parseCSVLine(line: string): string[] | null {
   } catch (error) {
     console.error("Error parsing CSV line:", error);
     return null;
+  }
+}
+
+/**
+ * Generate a video script for a content idea using Perplexity API
+ * 
+ * @param channelName The name of the YouTube channel
+ * @param channelUrl The URL of the YouTube channel
+ * @param videoTitle The title of the video
+ * @param videoDescription The description of the video
+ * @returns Generated video script
+ */
+export async function generateVideoScript(
+  channelName: string,
+  channelUrl: string,
+  videoTitle: string,
+  videoDescription: string
+): Promise<string> {
+  try {
+    const PERPLEXITY_API_KEY = process.env.NEXT_PUBLIC_PERPLEXITY_API_KEY;
+    
+    if (!PERPLEXITY_API_KEY) {
+      console.error('Perplexity API key is not available');
+      return 'Error: Perplexity API key is not available. Please check your environment variables.';
+    }
+    
+    console.log("Generating video script for:", videoTitle);
+    
+    // Prepare the prompt for Perplexity
+    const prompt = `
+## Instructions:
+Given a YouTube channel URL and the channel name, analyze the channel's unique style, tone, and typical video structure. Then generate a full video script on the specified topic that mimics that channel's conversational style, intro/outro, pacing, and content approach.
+
+---
+
+## Input Variables:
+- **Channel Name:** ${channelName}
+- **Channel URL:** ${channelUrl}
+- **Video Topic:** ${videoTitle}
+- **Video Description:** ${videoDescription}
+
+---
+
+## Task:
+1. Analyze the channel's:
+   - Typical video intros and outros
+   - Tone and energy (e.g., casual, enthusiastic, informative)
+   - Pacing and style of delivery (e.g., fast, detailed, humorous)
+   - Common phrases, catchphrases, or signature elements
+   - Visual/formatting style if relevant (e.g., use of text overlays, B-roll)
+2. Write a complete video script on the **Video Topic** that replicates the channel's style.
+3. The script should include:
+   - An engaging hook or intro
+   - Main content broken into clear sections or days if relevant
+   - Personal anecdotes or commentary in the channel's voice
+   - A call to action consistent with the channel's usual style
+4. Format the script naturally for spoken delivery, using the channel's typical vocabulary and tone.
+
+The script should be organized with clear sections and formatted for easy reading. Include any notes for visual elements, B-roll suggestions, or on-screen text in [brackets].
+`;
+
+    console.log("Calling Perplexity API for video script generation");
+    
+    // Call Perplexity API
+    const response = await fetch('https://api.perplexity.ai/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${PERPLEXITY_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'sonar-pro',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 4000
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Perplexity API error:', errorData);
+      return `Error generating script: ${JSON.stringify(errorData)}`;
+    }
+
+    const data = await response.json();
+    const script = data.choices[0].message.content;
+    
+    return script;
+  } catch (error) {
+    console.error('Error generating video script:', error);
+    return `Error generating script: ${error}`;
   }
 } 
