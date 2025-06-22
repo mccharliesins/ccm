@@ -30,7 +30,7 @@ interface YouTubeChannelData {
 
 export default function RelatedChannels() {
   const [relatedChannels, setRelatedChannels] = useState<RelatedChannel[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedChannelId, setSelectedChannelId] = useState<string>("");
   const [userChannels, setUserChannels] = useState<
@@ -46,6 +46,7 @@ export default function RelatedChannels() {
   const [youtubeData, setYoutubeData] = useState<
     Record<string, YouTubeChannelData>
   >({});
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   // Define RGB values for primary colors
   const colorValues = {
@@ -74,90 +75,137 @@ export default function RelatedChannels() {
       setSelectedChannelId(channelOptions[0].id);
       console.log("Auto-selected channel ID:", channelOptions[0].id);
     }
+  }, []);
+
+  // Check if data exists in localStorage when channel is selected
+  useEffect(() => {
+    if (selectedChannelId) {
+      checkLocalStorageData();
+    }
   }, [selectedChannelId]);
 
-  // Fetch related channels when a channel is selected
-  useEffect(() => {
-    async function fetchRelatedChannels() {
-      if (!selectedChannelId) {
-        console.log("No channel selected, skipping fetch");
-        return;
+  // Check if data exists in localStorage for the selected channel
+  const checkLocalStorageData = () => {
+    try {
+      setDataLoaded(false);
+      setRelatedChannels([]);
+      setParsedChannels([]);
+      setRawResponse("");
+      setError(null);
+
+      const storedChannels = localStorage.getItem(
+        `relatedChannels_${selectedChannelId}`
+      );
+
+      if (storedChannels) {
+        const parsedData = JSON.parse(storedChannels);
+        setRelatedChannels(parsedData);
+        setDataLoaded(true);
+        console.log(
+          "Loaded data from localStorage for channel:",
+          selectedChannelId
+        );
+      } else {
+        console.log("No data in localStorage for channel:", selectedChannelId);
+        setDataLoaded(false);
       }
+    } catch (error) {
+      console.error("Error checking localStorage:", error);
+      setDataLoaded(false);
+    }
+  };
 
-      // If using mock data, load that instead
-      if (useMockData) {
-        console.log("Using mock data instead of API call");
-        setRelatedChannels(getMockRelatedChannels());
-        setIsLoading(false);
-        setError(null);
+  // Fetch related channels when the process button is clicked
+  const fetchRelatedChannels = async () => {
+    if (!selectedChannelId) {
+      setError("Please select a channel first");
+      return;
+    }
 
-        // Set mock raw API response for demo purposes
-        const mockRawResponse = `
+    // If using mock data, load that instead
+    if (useMockData) {
+      console.log("Using mock data instead of API call");
+      setRelatedChannels(getMockRelatedChannels());
+      setIsLoading(false);
+      setError(null);
+      setDataLoaded(true);
+
+      // Set mock raw API response for demo purposes
+      const mockRawResponse = `
 Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and differences
 1,Gaming Enthusiast,Gaming & Let's Plays,8.5,"Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content."
 2,Tech Reviews Pro,Tech Reviews,7.2,"Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews."
 3,Creative Tutorials,Design & Creative Skills,6.8,"Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns."
 4,Digital Marketing Mastery,Digital Marketing,5.9,"Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
 `;
-        setRawResponse(mockRawResponse);
-        setParsedChannels(parsePerplexityData(mockRawResponse));
+      setRawResponse(mockRawResponse);
+      setParsedChannels(parsePerplexityData(mockRawResponse));
+
+      // Save mock data to localStorage
+      try {
+        localStorage.setItem(
+          `relatedChannels_${selectedChannelId}`,
+          JSON.stringify(getMockRelatedChannels())
+        );
+      } catch (err) {
+        console.error("Error saving mock data to localStorage:", err);
+      }
+
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+      setRawResponse("");
+      setParsedChannels([]);
+
+      console.log("Fetching related channels for:", selectedChannelId);
+
+      // Call the API to find related channels
+      const result = await findRelatedChannels(selectedChannelId);
+      console.log("Related channels result:", result);
+
+      if (result.channels.length === 0) {
+        setRelatedChannels([]);
+        setError(
+          "No related channels found. Try adding more videos to your channel or select a different channel."
+        );
+        setIsLoading(false);
         return;
       }
 
+      // Set the raw API response
+      setRawResponse(result.rawResponse);
+
+      // Parse the raw response
+      const parsed = parsePerplexityData(result.rawResponse);
+      setParsedChannels(parsed);
+
+      // Set the related channels directly
+      console.log("Setting related channels:", result.channels);
+      setRelatedChannels(result.channels);
+      setDataLoaded(true);
+
+      // Fetch YouTube data for each channel
+      fetchYouTubeData(parsed);
+
+      // Save to localStorage for future use
       try {
-        setIsLoading(true);
-        setError(null);
-        setRawResponse("");
-        setParsedChannels([]);
-
-        console.log("Fetching related channels for:", selectedChannelId);
-
-        // Call the API to find related channels
-        const result = await findRelatedChannels(selectedChannelId);
-        console.log("Related channels result:", result);
-
-        if (result.channels.length === 0) {
-          setRelatedChannels([]);
-          setError(
-            "No related channels found. Try adding more videos to your channel or select a different channel."
-          );
-          setIsLoading(false);
-          return;
-        }
-
-        // Set the raw API response
-        setRawResponse(result.rawResponse);
-
-        // Parse the raw response
-        const parsed = parsePerplexityData(result.rawResponse);
-        setParsedChannels(parsed);
-
-        // Set the related channels directly
-        console.log("Setting related channels:", result.channels);
-        setRelatedChannels(result.channels);
-
-        // Fetch YouTube data for each channel
-        fetchYouTubeData(parsed);
-
-        // Save to localStorage for future use
-        try {
-          localStorage.setItem(
-            `relatedChannels_${selectedChannelId}`,
-            JSON.stringify(result.channels)
-          );
-        } catch (err) {
-          console.error("Error saving to localStorage:", err);
-        }
+        localStorage.setItem(
+          `relatedChannels_${selectedChannelId}`,
+          JSON.stringify(result.channels)
+        );
       } catch (err) {
-        console.error("Error fetching related channels:", err);
-        setError("Failed to fetch related channels. Please try again.");
-      } finally {
-        setIsLoading(false);
+        console.error("Error saving to localStorage:", err);
       }
+    } catch (err) {
+      console.error("Error fetching related channels:", err);
+      setError("Failed to fetch related channels. Please try again.");
+    } finally {
+      setIsLoading(false);
     }
-
-    fetchRelatedChannels();
-  }, [selectedChannelId, useMockData]);
+  };
 
   // Fetch YouTube channel data for each channel name
   const fetchYouTubeData = async (channels: PerplexityChannelData[]) => {
@@ -401,7 +449,6 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
   // Toggle mock data
   const toggleMockData = () => {
     setUseMockData((prev) => !prev);
-    setIsLoading(true);
   };
 
   // Toggle raw data display
@@ -444,7 +491,7 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <div className="mb-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div className="flex-grow">
               <label
                 htmlFor="channelSelect"
@@ -452,24 +499,66 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
               >
                 Select a channel to find similar creators:
               </label>
-              <select
-                id="channelSelect"
-                value={selectedChannelId}
-                onChange={(e) => setSelectedChannelId(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                style={
-                  {
-                    "--ring-primary": "var(--primary)",
-                    "--border-primary": "var(--primary)",
-                  } as React.CSSProperties
-                }
-              >
-                {userChannels.map((channel) => (
-                  <option key={channel.id} value={channel.id}>
-                    {channel.title}
-                  </option>
-                ))}
-              </select>
+              <div className="flex flex-col md:flex-row gap-4">
+                <select
+                  id="channelSelect"
+                  value={selectedChannelId}
+                  onChange={(e) => setSelectedChannelId(e.target.value)}
+                  className="block w-full pl-3 pr-10 py-2 text-base text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
+                  style={
+                    {
+                      "--ring-primary": "var(--primary)",
+                      "--border-primary": "var(--primary)",
+                    } as React.CSSProperties
+                  }
+                >
+                  {userChannels.map((channel) => (
+                    <option key={channel.id} value={channel.id}>
+                      {channel.title}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  onClick={fetchRelatedChannels}
+                  disabled={isLoading || !selectedChannelId}
+                  className={`inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                    isLoading || !selectedChannelId
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : dataLoaded ? (
+                    "Refresh Data"
+                  ) : (
+                    "Find Related Channels"
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="flex gap-2">
@@ -521,6 +610,13 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
         <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative mb-6">
           <strong className="font-bold">Error! </strong>
           <span className="block sm:inline">{error}</span>
+        </div>
+      ) : relatedChannels.length === 0 && !dataLoaded ? (
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 px-4 py-3 rounded relative mb-6">
+          <p className="block sm:inline">
+            Select a channel and click "Find Related Channels" to discover
+            similar creators in your niche.
+          </p>
         </div>
       ) : (
         <>
