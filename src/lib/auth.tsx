@@ -76,7 +76,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     if (foundUser) {
       // Create user object without password
-      const { password: _password, ...userWithoutPassword } = foundUser;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { password: _, ...userWithoutPassword } = foundUser;
 
       // Save to state and local storage
       setUser(userWithoutPassword);
@@ -115,7 +116,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
     localStorage.setItem("users", JSON.stringify(users));
 
     // Login the user (without password in state)
-    const { password: _omitted, ...userWithoutPassword } = newUser;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: __, ...userWithoutPassword } = newUser;
     setUser(userWithoutPassword);
     localStorage.setItem("user", JSON.stringify(userWithoutPassword));
 
