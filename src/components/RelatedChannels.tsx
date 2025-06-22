@@ -9,6 +9,15 @@ import {
 } from "@/lib/youtube-api";
 import { getChannels } from "@/lib/youtube";
 
+// Interface for parsed Perplexity data
+interface PerplexityChannelData {
+  rank: number;
+  channelName: string;
+  niche: string;
+  similarityScore: number;
+  notes: string;
+}
+
 export default function RelatedChannels() {
   const [relatedChannels, setRelatedChannels] = useState<RelatedChannel[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -19,6 +28,11 @@ export default function RelatedChannels() {
   >([]);
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [useMockData, setUseMockData] = useState(false);
+  const [showRawData, setShowRawData] = useState(false);
+  const [rawApiResponse, setRawApiResponse] = useState<string>("");
+  const [parsedPerplexityData, setParsedPerplexityData] = useState<
+    PerplexityChannelData[]
+  >([]);
 
   // Load user channels
   useEffect(() => {
@@ -42,6 +56,163 @@ export default function RelatedChannels() {
     }
   }, [selectedChannelId]);
 
+  // Parse CSV data from Perplexity API response
+  const parsePerplexityData = (csvData: string): PerplexityChannelData[] => {
+    if (!csvData.trim()) return [];
+
+    try {
+      console.log("Parsing CSV data");
+
+      // Split by lines and remove empty lines
+      const lines = csvData
+        .trim()
+        .split("\n")
+        .filter((line) => line.trim());
+
+      // Skip header line if it exists
+      const headerLine = lines[0].toLowerCase();
+      const startIndex =
+        headerLine.includes("rank") ||
+        headerLine.includes("channel name") ||
+        headerLine.includes("similarity score")
+          ? 1
+          : 0;
+
+      const channels: PerplexityChannelData[] = [];
+
+      // Process only the first 10 responses (or fewer if there aren't 10)
+      const maxResponses = Math.min(10, lines.length - startIndex);
+      console.log(`Processing ${maxResponses} responses from CSV data`);
+
+      for (let i = startIndex; i < startIndex + maxResponses; i++) {
+        if (i >= lines.length) break;
+
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        console.log(`Processing line ${i}:`, line);
+
+        // Use a regex pattern to properly parse CSV with quoted elements
+        // This regex matches either:
+        // 1. A quoted field (which can contain commas)
+        // 2. An unquoted field (which cannot contain commas)
+        const result = parseCSVLine(line);
+
+        if (result && result.length >= 4) {
+          const rank = parseInt(result[0]) || i;
+          const channelName = result[1];
+          const niche = result[2];
+          const similarityScore = parseFloat(result[3]) || 0;
+          const notes = result.length >= 5 ? result[4] : "";
+
+          channels.push({
+            rank,
+            channelName,
+            niche,
+            similarityScore,
+            notes,
+          });
+
+          console.log(
+            `Added channel: ${channelName}, score: ${similarityScore}`
+          );
+        } else {
+          console.warn(
+            `Line ${i} doesn't have enough columns or couldn't be parsed:`,
+            line
+          );
+        }
+      }
+
+      console.log(`Successfully parsed ${channels.length} channels`);
+      return channels;
+    } catch (error) {
+      console.error("Error parsing Perplexity data:", error);
+      return [];
+    }
+  };
+
+  // Helper function to parse a CSV line with proper handling of quoted fields
+  const parseCSVLine = (line: string): string[] | null => {
+    try {
+      const result: string[] = [];
+      let currentField = "";
+      let inQuotes = false;
+      let i = 0;
+
+      // We need exactly 5 columns: Rank, Channel Name, Niche, Score, Notes
+      // Where Notes is optional
+      const requiredColumns = 4;
+      let columnCount = 0;
+
+      while (i < line.length) {
+        const char = line[i];
+
+        // Handle quotes
+        if (char === '"') {
+          if (inQuotes && i + 1 < line.length && line[i + 1] === '"') {
+            // Double quotes inside quoted field = escaped quote
+            currentField += '"';
+            i += 2; // Skip both quotes
+            continue;
+          } else {
+            // Toggle quote state
+            inQuotes = !inQuotes;
+            i++;
+            continue;
+          }
+        }
+
+        // Handle commas
+        if (char === "," && !inQuotes) {
+          result.push(currentField.trim());
+          currentField = "";
+          columnCount++;
+
+          // If we have the required columns, treat the rest as the last column
+          if (columnCount === requiredColumns) {
+            // Add the rest of the line as the last column (notes)
+            const restOfLine = line.substring(i + 1).trim();
+
+            // If the rest starts with a quote, handle it properly
+            if (restOfLine.startsWith('"') && restOfLine.endsWith('"')) {
+              result.push(
+                restOfLine.substring(1, restOfLine.length - 1).trim()
+              );
+            } else {
+              result.push(restOfLine);
+            }
+            break;
+          }
+
+          i++;
+          continue;
+        }
+
+        // Add character to current field
+        currentField += char;
+        i++;
+      }
+
+      // Add the last field if not already added
+      if (columnCount < requiredColumns) {
+        result.push(currentField.trim());
+      }
+
+      // Clean up quotes from all fields
+      return result.map((field) => {
+        // Remove surrounding quotes if present
+        if (field.startsWith('"') && field.endsWith('"')) {
+          return field.substring(1, field.length - 1).trim();
+        }
+        return field.trim();
+      });
+    } catch (error) {
+      console.error("Error parsing CSV line:", error);
+      return null;
+    }
+  };
+
   // Fetch related channels when a channel is selected
   useEffect(() => {
     async function fetchRelatedChannels() {
@@ -56,6 +227,22 @@ export default function RelatedChannels() {
         setRelatedChannels(getMockRelatedChannels());
         setIsLoading(false);
         setError(null);
+
+        // Set mock raw API response for demo purposes
+        const mockRawResponse = `
+Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and differences
+1,Gaming Enthusiast,Gaming & Let's Plays,8.5,"Strong match in gaming niche with similar focus on strategy games and RPGs. Creates similar tutorial and walkthrough content."
+2,Tech Reviews Pro,Tech Reviews,7.2,"Similar presentation style and production value. Covers overlapping tech topics but with more focus on hardware reviews."
+3,Creative Tutorials,Design & Creative Skills,6.8,"Similar tutorial format and teaching style. Different niche but comparable audience demographics and engagement patterns."
+4,Digital Marketing Mastery,Digital Marketing,5.9,"Complementary content that appeals to similar business-oriented audience. Different primary topics but similar presentation style."
+        `;
+
+        setRawApiResponse(mockRawResponse);
+
+        // Parse the mock data
+        const parsedData = parsePerplexityData(mockRawResponse);
+        setParsedPerplexityData(parsedData);
+
         return;
       }
 
@@ -63,14 +250,16 @@ export default function RelatedChannels() {
         setIsLoading(true);
         setError(null);
         setDebugInfo("");
+        setRawApiResponse("");
+        setParsedPerplexityData([]);
 
         console.log("Fetching related channels for:", selectedChannelId);
 
-        // Find related channels
-        const channels = await findRelatedChannels(selectedChannelId);
-        console.log("Related channels result:", channels);
+        // Find related channels using the updated API
+        const result = await findRelatedChannels(selectedChannelId);
+        console.log("Related channels result:", result);
 
-        if (channels.length === 0) {
+        if (result.channels.length === 0) {
           setRelatedChannels([]);
           setError(
             "No related channels found. Try adding more videos to your channel or select a different channel."
@@ -82,9 +271,26 @@ export default function RelatedChannels() {
           return;
         }
 
+        // Set the raw API response
+        setRawApiResponse(result.rawResponse);
+
+        // Parse the raw response
+        const parsedData = parsePerplexityData(result.rawResponse);
+        setParsedPerplexityData(parsedData);
+
         // Set the related channels directly
-        console.log("Setting related channels:", channels);
-        setRelatedChannels(channels);
+        console.log("Setting related channels:", result.channels);
+        setRelatedChannels(result.channels);
+
+        // Save to localStorage for future use
+        try {
+          localStorage.setItem(
+            `relatedChannels_${selectedChannelId}`,
+            JSON.stringify(result.channels)
+          );
+        } catch (err) {
+          console.error("Error saving to localStorage:", err);
+        }
       } catch (err) {
         console.error("Error fetching related channels:", err);
         setError("Failed to fetch related channels. Please try again later.");
@@ -103,6 +309,11 @@ export default function RelatedChannels() {
     setIsLoading(true);
   };
 
+  // Toggle raw data display
+  const toggleRawData = () => {
+    setShowRawData((prev) => !prev);
+  };
+
   // Format subscriber count
   const formatSubscriberCount = (count: string) => {
     const num = parseInt(count, 10);
@@ -112,6 +323,110 @@ export default function RelatedChannels() {
       return `${(num / 1000).toFixed(1)}K`;
     }
     return num.toLocaleString();
+  };
+
+  // Component to display Perplexity data in a table format
+  const PerplexityDataTable = ({ data }: { data: PerplexityChannelData[] }) => {
+    if (!data || data.length === 0) return null;
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-800">
+            <tr>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Rank
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Channel Name
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Niche/Category
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Similarity Score
+              </th>
+              <th
+                scope="col"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+              >
+                Notes
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white dark:bg-gray-700 divide-y divide-gray-200 dark:divide-gray-600">
+            {data.map((channel, index) => (
+              <tr
+                key={index}
+                className={
+                  index % 2 === 0
+                    ? "bg-white dark:bg-gray-700"
+                    : "bg-gray-50 dark:bg-gray-800"
+                }
+              >
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
+                  {channel.rank}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  {channel.channelName}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  {channel.niche}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                  <div className="flex items-center">
+                    <div className="flex items-center">
+                      {[...Array(10)].map((_, i) => (
+                        <svg
+                          key={i}
+                          className={`w-3 h-3 ${
+                            i < Math.round(channel.similarityScore)
+                              ? "text-primary fill-current"
+                              : "text-gray-300 dark:text-gray-600"
+                          }`}
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      ))}
+                      <span className="ml-1">
+                        {channel.similarityScore.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-200">
+                  <div className="max-w-xs md:max-w-md lg:max-w-lg">
+                    <p className="line-clamp-3">{channel.notes}</p>
+                    {channel.notes && channel.notes.length > 150 && (
+                      <button
+                        className="text-xs text-primary hover:underline mt-1"
+                        onClick={() => alert(channel.notes)}
+                      >
+                        Read more
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
   };
 
   if (userChannels.length === 0) {
@@ -163,7 +478,7 @@ export default function RelatedChannels() {
               </select>
             </div>
 
-            <div>
+            <div className="flex gap-2">
               <button
                 onClick={toggleMockData}
                 className={`inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md ${
@@ -175,6 +490,17 @@ export default function RelatedChannels() {
               >
                 {useMockData ? "Using Demo Data" : "Use Demo Data"}
               </button>
+
+              <button
+                onClick={toggleRawData}
+                className={`inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm leading-4 font-medium rounded-md ${
+                  showRawData
+                    ? "bg-green-600 text-white"
+                    : "bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                }`}
+              >
+                {showRawData ? "Hide Raw Data" : "Show Raw Data"}
+              </button>
             </div>
           </div>
         </div>
@@ -184,14 +510,30 @@ export default function RelatedChannels() {
             How It Works
           </h3>
           <p className="text-gray-600 dark:text-gray-300">
-            We analyze your channel&apos;s top-performing videos to extract
-            keywords and topics. Then we search for videos with similar content
-            and identify channels that frequently appear across these searches.
-            The more times a channel appears in different topic searches, the
-            higher its match score.
+            We analyze your channel&apos;s content, style, and audience to find
+            similar creators in your niche. Our AI examines your recent videos
+            and identifies channels with matching topics, presentation style,
+            and audience engagement patterns. The similarity score indicates how
+            closely a channel matches yours.
           </p>
         </div>
       </div>
+
+      {showRawData && rawApiResponse && (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+            Raw API Response
+          </h3>
+          <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
+            <pre className="whitespace-pre-wrap text-xs font-mono text-gray-800 dark:text-gray-200 overflow-auto max-h-96">
+              {rawApiResponse}
+            </pre>
+          </div>
+          <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+            This is the raw CSV data returned by the Perplexity API.
+          </p>
+        </div>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
@@ -232,11 +574,18 @@ export default function RelatedChannels() {
             </div>
           )}
         </div>
-      ) : relatedChannels.length === 0 ? (
+      ) : parsedPerplexityData.length > 0 ? (
+        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
+            Similar Channels {useMockData && "(Demo Data)"}
+          </h3>
+          <PerplexityDataTable data={parsedPerplexityData} />
+        </div>
+      ) : (
         <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
           <div className="text-center">
             <p className="text-gray-600 dark:text-gray-300">
-              No related channels found. Try selecting a different channel or
+              No similar channels found. Try selecting a different channel or
               use demo data.
             </p>
             <div className="flex justify-center gap-3 mt-4">
@@ -256,103 +605,6 @@ export default function RelatedChannels() {
                 </button>
               )}
             </div>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
-            Related Channels {useMockData && "(Demo Data)"}
-          </h3>
-
-          <div className="space-y-6">
-            {relatedChannels.map((channel) => (
-              <div
-                key={channel.id}
-                className="flex flex-col md:flex-row gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg"
-              >
-                <div className="flex-shrink-0">
-                  <div className="relative w-24 h-24 rounded-full overflow-hidden">
-                    <Image
-                      src={
-                        channel.thumbnails.medium || channel.thumbnails.default
-                      }
-                      alt={channel.title}
-                      fill
-                      style={{ objectFit: "cover" }}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex-grow">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between mb-2">
-                    <h4 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      <a
-                        href={`https://www.youtube.com/channel/${channel.id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-primary"
-                        style={
-                          {
-                            "--text-primary": "var(--primary)",
-                          } as React.CSSProperties
-                        }
-                      >
-                        {channel.title}
-                      </a>
-                    </h4>
-
-                    <div className="flex items-center mt-2 md:mt-0">
-                      <div className="bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-xs font-medium px-2.5 py-0.5 rounded-full">
-                        {channel.matchFrequency} Matches
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2 mb-3">
-                    {channel.description || "No description available."}
-                  </p>
-
-                  <div className="flex flex-wrap gap-2 text-xs text-gray-500 dark:text-gray-400">
-                    <div className="flex items-center">
-                      <svg
-                        className="w-3 h-3 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"></path>
-                      </svg>
-                      {formatSubscriberCount(channel.subscriberCount)}{" "}
-                      subscribers
-                    </div>
-                    <div className="flex items-center">
-                      <svg
-                        className="w-3 h-3 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zm12.553 1.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z"></path>
-                      </svg>
-                      {channel.videoCount} videos
-                    </div>
-                    <div className="flex items-center">
-                      <svg
-                        className="w-3 h-3 mr-1"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                      >
-                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"></path>
-                        <path
-                          fillRule="evenodd"
-                          d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                          clipRule="evenodd"
-                        ></path>
-                      </svg>
-                      {parseInt(channel.viewCount).toLocaleString()} views
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       )}
