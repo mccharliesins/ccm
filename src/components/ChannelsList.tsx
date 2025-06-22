@@ -9,6 +9,17 @@ interface ChannelsListProps {
 }
 
 export default function ChannelsList({ channels }: ChannelsListProps) {
+  // Format subscriber count with commas and abbreviate if large
+  const formatSubscriberCount = (count: string) => {
+    const num = parseInt(count, 10);
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}K`;
+    }
+    return num.toLocaleString();
+  };
+
   if (channels.length === 0) {
     return (
       <div className="text-center py-4">
@@ -35,27 +46,40 @@ export default function ChannelsList({ channels }: ChannelsListProps) {
             );
           }
 
+          const channelUrl = `https://www.youtube.com/channel/${channel.channelInfo.id}`;
+
           return (
-            <div
+            <a
               key={channel.id}
-              className="flex-shrink-0 w-32 bg-white rounded-lg shadow p-2 text-center"
+              href={channelUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0 w-36 bg-white rounded-lg shadow p-3 text-center hover:shadow-md transition-shadow"
             >
-              <div className="relative w-12 h-12 rounded-full overflow-hidden mx-auto">
+              <div className="relative w-16 h-16 rounded-full overflow-hidden mx-auto border-2 border-gray-100">
                 <Image
-                  src={channel.channelInfo.thumbnails.medium}
+                  src={
+                    channel.channelInfo.thumbnails.medium ||
+                    channel.channelInfo.thumbnails.default
+                  }
                   alt={channel.channelInfo.title}
                   fill
                   style={{ objectFit: "cover" }}
                 />
               </div>
-              <p className="mt-2 text-xs font-medium text-gray-800 truncate">
+              <p className="mt-2 text-sm font-medium text-gray-800 truncate">
                 {channel.channelInfo.title}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {parseInt(channel.channelInfo.subscriberCount).toLocaleString()}{" "}
-                subs
-              </p>
-            </div>
+              <div className="flex flex-col text-xs text-gray-500">
+                <span className="truncate">
+                  {formatSubscriberCount(channel.channelInfo.subscriberCount)}{" "}
+                  subs
+                </span>
+                <span className="truncate">
+                  {channel.channelInfo.videoCount} videos
+                </span>
+              </div>
+            </a>
           );
         })}
       </div>

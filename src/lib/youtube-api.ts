@@ -16,6 +16,7 @@ export type YouTubeChannelInfo = {
   videoCount: string;
   viewCount: string;
   bannerUrl: string;
+  uploadsPlaylistId: string;
 };
 
 /**
@@ -35,7 +36,7 @@ export function extractChannelId(url: string): string | null {
   // Handle handle URLs (new @username format)
   const handleRegex = /youtube\.com\/@([^\/\?]+)/;
   const handleMatch = url.match(handleRegex);
-  if (handleMatch) return handleMatch[1];
+  if (handleMatch) return '@' + handleMatch[1];
 
   // Handle c/ URLs
   const cRegex = /youtube\.com\/c\/([^\/\?]+)/;
@@ -54,7 +55,7 @@ export function getIdentifierType(identifier: string): 'id' | 'handle' | 'userna
   }
   
   // This is a simplistic check - in a real app you'd want more robust validation
-  if (identifier.length === 24) {
+  if (identifier.length === 24 && !identifier.includes(' ')) {
     return 'id';
   }
   
@@ -63,6 +64,14 @@ export function getIdentifierType(identifier: string): 'id' | 'handle' | 'userna
 
 /**
  * Fetch channel information from YouTube API
+ * 
+ * API Documentation:
+ * Endpoint: GET https://www.googleapis.com/youtube/v3/channels
+ * Parameters:
+ *   - part=snippet,contentDetails,statistics,brandingSettings
+ *   - id={channel_id} OR forHandle={@channel_handle} OR forUsername={username}
+ *   - key={API_KEY}
+ * Quota Cost: 1 unit per request
  */
 export async function fetchChannelInfo(url: string): Promise<YouTubeChannelInfo | null> {
   try {
@@ -83,9 +92,9 @@ export async function fetchChannelInfo(url: string): Promise<YouTubeChannelInfo 
     if (identifierType === 'id') {
       apiUrl += `&id=${identifier}`;
     } else if (identifierType === 'handle') {
-      // Remove @ if present
-      if (identifier.startsWith('@')) {
-        identifier = identifier.substring(1);
+      // Make sure handle has @ prefix
+      if (!identifier.startsWith('@')) {
+        identifier = '@' + identifier;
       }
       apiUrl += `&forHandle=${identifier}`;
     } else {
@@ -95,28 +104,38 @@ export async function fetchChannelInfo(url: string): Promise<YouTubeChannelInfo 
     apiUrl += `&key=${API_KEY}`;
     
     const response = await fetch(apiUrl);
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('YouTube API error:', errorData);
+      return null;
+    }
+    
     const data = await response.json();
     
     if (!data.items || data.items.length === 0) {
+      console.error('No channel found with the provided identifier');
       return null;
     }
     
     const channel = data.items[0];
     
+    // Extract the data according to the API documentation
     return {
       id: channel.id,
       title: channel.snippet.title,
       description: channel.snippet.description,
       customUrl: channel.snippet.customUrl || '',
       thumbnails: {
-        default: channel.snippet.thumbnails.default.url,
-        medium: channel.snippet.thumbnails.medium.url,
-        high: channel.snippet.thumbnails.high.url,
+        default: channel.snippet.thumbnails.default?.url || '',
+        medium: channel.snippet.thumbnails.medium?.url || '',
+        high: channel.snippet.thumbnails.high?.url || '',
       },
-      subscriberCount: channel.statistics.subscriberCount,
-      videoCount: channel.statistics.videoCount,
-      viewCount: channel.statistics.viewCount,
+      subscriberCount: channel.statistics.subscriberCount || '0',
+      videoCount: channel.statistics.videoCount || '0',
+      viewCount: channel.statistics.viewCount || '0',
       bannerUrl: channel.brandingSettings?.image?.bannerExternalUrl || '',
+      uploadsPlaylistId: channel.contentDetails?.relatedPlaylists?.uploads || '',
     };
   } catch (error) {
     console.error('Error fetching channel info:', error);
