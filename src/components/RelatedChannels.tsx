@@ -549,10 +549,10 @@ Rank,Channel Name,Niche/Category,Similarity Score (0-10),Notes on similarity and
                       </svg>
                       Processing...
                     </>
-                  ) : dataLoaded ? (
+                  ) : dataLoaded && relatedChannels.length > 0 ? (
                     "Refresh Data"
                   ) : (
-                    "Find Related Channels"
+                    "Find Similar Channels"
                   )}
                 </button>
               </div>
