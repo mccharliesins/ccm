@@ -25,18 +25,29 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --primary-light: #1e3a8a; /* Blue-900 */
-    --success-light: #064e3b; /* Green-900 */
-    --accent-light: #4c1d95; /* Purple-900 */
+    /* Removing dark background to ensure white background everywhere */
+    /* --background: #0a0a0a; */
+    --background: #ffffff;
+    --foreground: #171717;
+    --primary-light: #f97316; /* Keep orange theme in dark mode */
+    --success-light: #ecfdf5; /* Green-50 */
+    --accent-light: #fff7ed; /* Orange-50 */
   }
 }
 
+html, 
 body {
-  background: var(--background);
+  background: #ffffff !important; /* Force white background */
   color: var(--foreground);
   font-family: 'Outfit', sans-serif;
+}
+
+/* Explicitly override dark mode for main elements */
+body,
+main,
+.min-h-screen,
+.bg-white {
+  background-color: #ffffff !important;
 }
 
 /* Particle animation */

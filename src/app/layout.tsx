@@ -36,11 +36,11 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${outfit.className} font-outfit`}>
+      <body className={`${outfit.className} font-outfit bg-white`}>
         <ClientOnly>
           <AuthProvider>
             <Header />
-            <main className="min-h-screen">{children}</main>
+            <main className="min-h-screen bg-white">{children}</main>
           </AuthProvider>
         </ClientOnly>
       </body>

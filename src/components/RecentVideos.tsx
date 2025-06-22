@@ -261,15 +261,17 @@ export default function RecentVideos() {
         {/* Desktop Filters */}
         <div
           className={`${
-            showFilters ? "flex" : "hidden"
-          } md:flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2 md:mt-0`}
+            showFilters
+              ? "flex bg-gray-50 p-2 rounded-lg border border-gray-200"
+              : "hidden"
+          } md:flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-2 mt-2 md:mt-0 md:bg-gray-50 md:p-2 md:rounded-lg md:border md:border-gray-200`}
         >
           {/* Channel Filter */}
           <div className="relative">
             <select
               value={filterBy}
               onChange={(e) => setFilterBy(e.target.value)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md bg-white"
             >
               <option value="all">All Channels</option>
               {channels.map((channel) => (
@@ -285,7 +287,7 @@ export default function RecentVideos() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md bg-white"
             >
               <option value="newest">Newest First</option>
               <option value="views">Most Views</option>
@@ -297,7 +299,7 @@ export default function RecentVideos() {
             <select
               value={dateRange}
               onChange={handleDateRangeChange}
-              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
+              className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md bg-white"
             >
               <option value="all">All Time</option>
               <option value="week">Last 7 Days</option>
@@ -316,7 +318,7 @@ export default function RecentVideos() {
                 type="date"
                 value={customStartDate}
                 onChange={(e) => setCustomStartDate(e.target.value)}
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md"
+                className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-orange-500 focus:border-orange-500 sm:text-sm rounded-md bg-white"
               />
             </div>
           )}

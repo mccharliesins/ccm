@@ -37,6 +37,7 @@ export default function RelatedChannels() {
     Record<string, YouTubeChannelData>
   >({});
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [searchInitiated, setSearchInitiated] = useState(false);
 
   // Define RGB values for primary colors
   const colorValues = {
@@ -60,6 +61,7 @@ export default function RelatedChannels() {
         const parsedData = JSON.parse(storedChannels);
         setRelatedChannels(parsedData);
         setDataLoaded(true);
+        setSearchInitiated(true);
         console.log(
           "Loaded data from localStorage for channel:",
           selectedChannelId
@@ -67,10 +69,12 @@ export default function RelatedChannels() {
       } else {
         console.log("No data in localStorage for channel:", selectedChannelId);
         setDataLoaded(false);
+        setSearchInitiated(false);
       }
     } catch (error) {
       console.error("Error checking localStorage:", error);
       setDataLoaded(false);
+      setSearchInitiated(false);
     }
   }, [selectedChannelId]);
 
@@ -113,6 +117,7 @@ export default function RelatedChannels() {
     try {
       setIsLoading(true);
       setError(null);
+      setSearchInitiated(true);
 
       console.log("Fetching related channels for:", selectedChannelId);
 
@@ -417,8 +422,8 @@ export default function RelatedChannels() {
 
   if (userChannels.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
-        <p className="text-gray-600 dark:text-gray-300 mb-4">
+      <div className="bg-white shadow rounded-lg p-6 text-center">
+        <p className="text-gray-600 mb-4">
           No YouTube channels found. Add channels in the settings to discover
           related channels.
         </p>
@@ -434,13 +439,13 @@ export default function RelatedChannels() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+      <div className="bg-white shadow rounded-lg p-6">
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div className="flex-grow">
               <label
                 htmlFor="channelSelect"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
+                className="block text-sm font-medium text-gray-700 mb-2"
               >
                 Select a channel to find similar creators:
               </label>
@@ -449,7 +454,7 @@ export default function RelatedChannels() {
                   id="channelSelect"
                   value={selectedChannelId}
                   onChange={(e) => setSelectedChannelId(e.target.value)}
-                  className="block w-full pl-3 pr-10 py-2 text-base text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                  className="block w-full pl-3 pr-10 py-2 text-base text-gray-700 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-orange-500 focus:border-orange-500"
                 >
                   {userChannels.map((channel) => (
                     <option key={channel.id} value={channel.id}>
@@ -500,11 +505,9 @@ export default function RelatedChannels() {
           </div>
         </div>
 
-        <div className="prose dark:prose-invert max-w-none">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-            How It Works
-          </h3>
-          <p className="text-gray-600 dark:text-gray-300">
+        <div className="prose max-w-none">
+          <h3 className="text-lg font-medium text-gray-900">How It Works</h3>
+          <p className="text-gray-600">
             We analyze your channel&apos;s content, style, and audience to find
             similar creators in your niche. Our AI examines your recent videos
             and identifies channels with matching topics, presentation style,
@@ -519,65 +522,65 @@ export default function RelatedChannels() {
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded relative mb-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
           <strong className="font-bold">Error! </strong>
           <span className="block sm:inline">{error}</span>
         </div>
-      ) : relatedChannels.length === 0 && !dataLoaded ? (
-        <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 px-4 py-3 rounded relative mb-6">
+      ) : !searchInitiated ? (
+        <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded relative mb-6">
           <p className="block sm:inline">
-            Select a channel and click &quot;Find Related Channels&quot; to
+            Select a channel and click &quot;Find Similar Channels&quot; to
             discover similar creators in your niche.
           </p>
         </div>
-      ) : (
+      ) : dataLoaded && relatedChannels.length > 0 ? (
         <>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-orange-500">
                 <tr>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider"
                   >
                     Rank
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider"
                   >
                     Channel
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider"
                   >
                     Niche
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider"
                   >
                     Similarity
                   </th>
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                    className="px-6 py-3 text-left text-xs font-medium text-white uppercase tracking-wider"
                   >
                     Notes
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+              <tbody className="bg-white divide-y divide-gray-200">
                 {parsedChannels.map((channel) => {
                   const youtubeChannel = youtubeData[channel.channelName];
 
                   return (
                     <tr key={channel.rank}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {channel.rank}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 text-sm text-gray-900">
                         <div className="flex items-center">
                           {youtubeChannel ? (
                             <>
@@ -598,11 +601,11 @@ export default function RelatedChannels() {
                                   href={`https://youtube.com/channel/${youtubeChannel.id}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="font-medium text-orange-600 dark:text-orange-400 hover:underline"
+                                  className="font-medium text-orange-500 hover:text-orange-600 hover:underline"
                                 >
                                   {channel.channelName}
                                 </a>
-                                <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <div className="text-xs text-gray-500">
                                   {formatSubscriberCount(
                                     youtubeChannel.subscriberCount
                                   )}{" "}
@@ -615,10 +618,10 @@ export default function RelatedChannels() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {channel.niche}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex items-center">
                           <span className="mr-2">
                             {channel.similarityScore.toFixed(1)}
@@ -653,8 +656,8 @@ export default function RelatedChannels() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
-                        <div className="max-w-md">{channel.notes}</div>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {channel.notes}
                       </td>
                     </tr>
                   );
@@ -663,6 +666,13 @@ export default function RelatedChannels() {
             </table>
           </div>
         </>
+      ) : (
+        <div className="bg-orange-50 border border-orange-200 text-orange-700 px-4 py-3 rounded relative mb-6">
+          <p className="block sm:inline">
+            No related channels found. Try adding more videos to your channel or
+            select a different channel.
+          </p>
+        </div>
       )}
     </div>
   );

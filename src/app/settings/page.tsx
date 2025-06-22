@@ -154,8 +154,8 @@ export default function Settings() {
 
   if (authLoading || isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[80vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex justify-center items-center min-h-[80vh] bg-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500"></div>
       </div>
     );
   }
@@ -166,74 +166,96 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600">
-          Manage your account settings and preferences
-        </p>
-      </div>
+    <div className="w-full min-h-screen bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-2">
+            Manage your account settings and YouTube channel connections
+          </p>
+        </div>
 
-      <div className="bg-white shadow rounded-lg p-6 mb-8">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">
-          YouTube Channel Management
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Add your YouTube channel to track performance and get personalized
-          content ideas.
-        </p>
+        <div className="bg-white shadow rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-medium text-gray-900 mb-4">
+            YouTube Channel Management
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Connect your YouTube channels to Creator Climb to unlock powerful
+            features like content suggestions, performance tracking, and
+            competitive analysis. We use the YouTube API to fetch your channel
+            data and provide personalized recommendations.
+          </p>
 
-        <form onSubmit={handleAddChannel} className="mb-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-grow">
-              <label
-                htmlFor="youtube-url"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                YouTube Channel URL
-              </label>
-              <input
-                type="text"
-                id="youtube-url"
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm px-3 py-2 border"
-                placeholder="https://youtube.com/channel/..."
-                value={youtubeUrl}
-                onChange={(e) => setYoutubeUrl(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 h-10"
-              >
-                {isSubmitting ? "Adding..." : "Add Channel"}
-              </button>
-            </div>
-          </div>
-
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {success && <p className="mt-2 text-sm text-green-600">{success}</p>}
-        </form>
-
-        <div>
-          <h3 className="text-md font-medium text-gray-900 mb-4">
-            Your Channels
-          </h3>
-          {channels.length === 0 ? (
-            <p className="text-gray-500 text-sm">No channels added yet</p>
-          ) : (
-            <div className="space-y-4">
-              {channels.map((channel) => (
-                <ChannelCard
-                  key={channel.id}
-                  channel={channel}
-                  onRemove={handleRemoveChannel}
+          <form onSubmit={handleAddChannel} className="mb-8">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex-grow">
+                <label
+                  htmlFor="youtube-url"
+                  className="block text-sm font-medium text-gray-700 mb-1"
+                >
+                  YouTube Channel URL
+                </label>
+                <input
+                  type="text"
+                  id="youtube-url"
+                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm px-3 py-2 border"
+                  placeholder="https://youtube.com/channel/... or https://youtube.com/@username"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                  required
                 />
-              ))}
+                <p className="mt-1 text-xs text-gray-500">
+                  Enter your YouTube channel URL or custom handle URL (e.g.,
+                  https://youtube.com/@yourchannel)
+                </p>
+              </div>
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 disabled:bg-orange-400 h-10"
+                >
+                  {isSubmitting ? "Adding..." : "Add Channel"}
+                </button>
+              </div>
             </div>
-          )}
+
+            {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+            {success && (
+              <p className="mt-2 text-sm text-green-600">{success}</p>
+            )}
+          </form>
+
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Your Connected Channels
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Below are all the YouTube channels you've connected to Creator
+              Climb. You can remove channels at any time, or visit them directly
+              using the links provided. Each channel card displays key metrics
+              like subscriber count and video uploads.
+            </p>
+            {channels.length === 0 ? (
+              <div className="bg-orange-50 border border-orange-200 rounded-md p-4 text-orange-700">
+                <p className="text-sm font-medium">No channels added yet</p>
+                <p className="text-xs mt-1">
+                  Add your first YouTube channel above to get started with
+                  personalized content recommendations.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {channels.map((channel) => (
+                  <ChannelCard
+                    key={channel.id}
+                    channel={channel}
+                    onRemove={handleRemoveChannel}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

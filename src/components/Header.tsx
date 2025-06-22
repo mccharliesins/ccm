@@ -32,7 +32,7 @@ export default function Header() {
           <div className="md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="text-gray-300 focus:outline-none"
+              className="text-white focus:outline-none"
             >
               <svg
                 className="h-6 w-6"
@@ -63,33 +63,27 @@ export default function Header() {
           <nav className="hidden md:flex items-center space-x-6">
             <Link
               href="/"
-              className="text-gray-300 hover:text-orange-400 transition-colors duration-200"
+              className="text-white hover:text-orange-200 transition-colors duration-200"
             >
               Home
             </Link>
             <Link
               href="/dashboard"
-              className="text-gray-300 hover:text-orange-400 transition-colors duration-200"
+              className="text-white hover:text-orange-200 transition-colors duration-200"
             >
               Dashboard
-            </Link>
-            <Link
-              href="/content-ideas"
-              className="text-gray-300 hover:text-orange-400 transition-colors duration-200"
-            >
-              Content Ideas
             </Link>
             {user ? (
               <>
                 <Link
                   href="/settings"
-                  className="text-gray-300 hover:text-orange-400 transition-colors duration-200"
+                  className="text-white hover:text-orange-200 transition-colors duration-200"
                 >
                   Settings
                 </Link>
                 <button
                   onClick={logout}
-                  className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors duration-200"
+                  className="bg-white text-orange-500 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors duration-200"
                 >
                   Logout
                 </button>
@@ -98,13 +92,13 @@ export default function Header() {
               <div className="flex space-x-2">
                 <Link
                   href="/login"
-                  className="text-orange-500 border border-orange-500 px-4 py-2 rounded-md hover:bg-orange-500 hover:text-white transition-colors duration-200"
+                  className="text-white border border-white px-4 py-2 rounded-md hover:bg-white hover:text-orange-500 transition-colors duration-200"
                 >
                   Login
                 </Link>
                 <Link
                   href="/signup"
-                  className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors duration-200"
+                  className="bg-white text-orange-500 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors duration-200"
                 >
                   Sign Up
                 </Link>
@@ -119,30 +113,23 @@ export default function Header() {
             <div className="flex flex-col space-y-3">
               <Link
                 href="/"
-                className="text-gray-300 hover:text-orange-400 transition-colors duration-200 py-2"
+                className="text-white hover:text-orange-200 transition-colors duration-200 py-2"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Home
               </Link>
               <Link
                 href="/dashboard"
-                className="text-gray-300 hover:text-orange-400 transition-colors duration-200 py-2"
+                className="text-white hover:text-orange-200 transition-colors duration-200 py-2"
                 onClick={() => setIsMenuOpen(false)}
               >
                 Dashboard
-              </Link>
-              <Link
-                href="/content-ideas"
-                className="text-gray-300 hover:text-orange-400 transition-colors duration-200 py-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Content Ideas
               </Link>
               {user ? (
                 <>
                   <Link
                     href="/settings"
-                    className="text-gray-300 hover:text-orange-400 transition-colors duration-200 py-2"
+                    className="text-white hover:text-orange-200 transition-colors duration-200 py-2"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Settings
@@ -152,7 +139,7 @@ export default function Header() {
                       logout();
                       setIsMenuOpen(false);
                     }}
-                    className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors duration-200 text-left"
+                    className="bg-white text-orange-500 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors duration-200 text-left"
                   >
                     Logout
                   </button>
@@ -161,14 +148,14 @@ export default function Header() {
                 <div className="flex flex-col space-y-2">
                   <Link
                     href="/login"
-                    className="text-orange-500 border border-orange-500 px-4 py-2 rounded-md hover:bg-orange-500 hover:text-white transition-colors duration-200 text-center"
+                    className="text-white border border-white px-4 py-2 rounded-md hover:bg-white hover:text-orange-500 transition-colors duration-200 text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Login
                   </Link>
                   <Link
                     href="/signup"
-                    className="bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors duration-200 text-center"
+                    className="bg-white text-orange-500 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors duration-200 text-center"
                     onClick={() => setIsMenuOpen(false)}
                   >
                     Sign Up

@@ -148,14 +148,14 @@ export default function ContentIdeas() {
 
   if (userChannels.length === 0) {
     return (
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 text-center">
-        <p className="text-gray-600 dark:text-gray-300 mb-4">
+      <div className="bg-white shadow rounded-lg p-6 text-center">
+        <p className="text-gray-600 mb-4">
           No YouTube channels found. Add channels in the settings to generate
           content ideas.
         </p>
         <a
           href="/settings"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
         >
           Add Channels
         </a>
@@ -165,13 +165,21 @@ export default function ContentIdeas() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">
+      <div className="bg-white shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">
           Generate Content Ideas
         </h3>
 
+        <p className="text-gray-600 mb-6">
+          Our AI-powered content generator analyzes trending topics and your
+          channel's niche to suggest video ideas that resonate with your
+          audience. Select your channel below and click "Generate Content Ideas"
+          to get started. For best results, make sure you've found related
+          channels in the "Related Channels" tab first.
+        </p>
+
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 text-red-800 dark:text-red-200 p-4 rounded-md mb-4">
+          <div className="bg-red-50 text-red-800 p-4 rounded-md mb-4">
             {error}
           </div>
         )}
@@ -179,7 +187,7 @@ export default function ContentIdeas() {
         <div className="mb-6">
           <label
             htmlFor="channel-select"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            className="block text-sm font-medium text-gray-700 mb-1"
           >
             Select your channel:
           </label>
@@ -187,7 +195,7 @@ export default function ContentIdeas() {
             id="channel-select"
             value={selectedChannelId}
             onChange={(e) => setSelectedChannelId(e.target.value)}
-            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+            className="block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
           >
             {userChannels.map((channel) => (
               <option key={channel.id} value={channel.id}>
@@ -201,81 +209,67 @@ export default function ContentIdeas() {
           <button
             onClick={generateIdeas}
             disabled={isLoading || relatedChannels.length === 0}
-            className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+            className={`px-4 py-2 rounded-md text-white font-medium ${
               isLoading || relatedChannels.length === 0
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                : "bg-orange-500 hover:bg-orange-600"
             }`}
           >
-            {isLoading ? (
-              <>
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Generating...
-              </>
-            ) : (
-              "Generate Content Ideas"
-            )}
+            {isLoading ? "Generating..." : "Generate Content Ideas"}
           </button>
         </div>
+
+        {relatedChannels.length === 0 && (
+          <div className="mt-4 p-4 bg-orange-50 border border-orange-200 text-orange-700 rounded-md">
+            <p className="text-sm">
+              You need to find related channels first. Go to the Related
+              Channels tab and click "Find Similar Channels" before generating
+              content ideas.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Enhanced Content Ideas */}
       {enhancedIdeas.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-6">
             Enhanced Content Ideas
           </h3>
+          <p className="text-gray-600 mb-6">
+            These AI-enhanced content ideas are tailored specifically to your
+            channel's style and audience. Each idea includes a virality score
+            and detailed explanation of why this content could perform well. You
+            can also generate a complete video script for any idea with one
+            click.
+          </p>
 
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-6">
             {enhancedIdeas.map((idea, index) => (
-              <div
-                key={index}
-                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6"
-              >
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <div key={index} className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">
                   {idea.title}
                 </h4>
 
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  {idea.description}
-                </p>
+                <p className="text-gray-600 mb-4">{idea.description}</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <h5 className="text-sm font-medium text-gray-700 mb-1">
                       Virality Score:
                     </h5>
                     <div className="flex items-center">
-                      <span className="text-lg font-bold text-blue-600 dark:text-blue-400 mr-2">
+                      <span className="text-lg font-bold text-orange-600 mr-2">
                         {idea.viralityScore}/10
                       </span>
                       <div className="flex">
                         {[...Array(10)].map((_, i) => (
                           <svg
                             key={i}
-                            className={`w-4 h-4 ${
+                            className={`h-4 w-4 ${
                               i < idea.viralityScore
                                 ? "text-yellow-400 fill-current"
-                                : "text-gray-300 dark:text-gray-600"
+                                : "text-gray-300"
                             }`}
                             viewBox="0 0 20 20"
                             fill="currentColor"
@@ -288,63 +282,37 @@ export default function ContentIdeas() {
                   </div>
 
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <h5 className="text-sm font-medium text-gray-700 mb-1">
                       Why to make this video:
                     </h5>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      {idea.whyToMake}
-                    </p>
+                    <p className="text-gray-600">{idea.whyToMake}</p>
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => handleGenerateScript(index, true)}
                     disabled={generatingScript === index}
-                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                    className={`px-4 py-2 rounded-md text-white font-medium ${
                       generatingScript === index
                         ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        : "bg-orange-500 hover:bg-orange-600"
                     }`}
                   >
-                    {generatingScript === index ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Generating Script...
-                      </>
-                    ) : (
-                      "Analyse & Generate Script"
-                    )}
+                    {generatingScript === index
+                      ? "Generating Script..."
+                      : "Analyse & Generate Script"}
                   </button>
                 </div>
 
                 {/* Display generated script if available */}
                 {scripts[index] && (
-                  <div className="mt-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
-                    <h5 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">
+                  <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                    <h5 className="text-md font-medium text-gray-900 mb-4">
                       Generated Script
                     </h5>
-                    <div className="prose prose-lg dark:prose-invert max-w-none">
-                      <div className="text-base text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 p-6 rounded overflow-auto max-h-[600px] font-outfit markdown-content">
+                    <div className="prose prose-lg max-w-none">
+                      <div className="text-base text-gray-800 bg-gray-50 p-6 rounded overflow-auto max-h-[600px] font-outfit markdown-content">
                         <ReactMarkdown>{scripts[index]}</ReactMarkdown>
                       </div>
                     </div>
@@ -358,35 +326,35 @@ export default function ContentIdeas() {
 
       {/* Basic Content Ideas */}
       {contentIdeas.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
-          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-6">
+        <div className="bg-white shadow rounded-lg p-6">
+          <h3 className="text-lg font-medium text-gray-900 mb-6">
             Content Ideas
           </h3>
+          <p className="text-gray-600 mb-6">
+            These content ideas are based on trending topics in your niche. Each
+            suggestion includes tags, keywords, thumbnail ideas, and estimated
+            view potential to help you plan your content strategy.
+          </p>
 
-          <div className="space-y-8">
+          <div className="grid grid-cols-1 gap-6">
             {contentIdeas.map((idea, index) => (
-              <div
-                key={index}
-                className="bg-gray-50 dark:bg-gray-700 rounded-lg p-6"
-              >
-                <h4 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+              <div key={index} className="bg-gray-50 rounded-lg p-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-2">
                   {idea.title}
                 </h4>
 
-                <p className="text-gray-600 dark:text-gray-300 mb-4">
-                  {idea.description}
-                </p>
+                <p className="text-gray-600 mb-4">{idea.description}</p>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <h5 className="text-sm font-medium text-gray-700 mb-1">
                       Tags:
                     </h5>
                     <div className="flex flex-wrap gap-1">
                       {idea.tags.map((tag, tagIndex) => (
                         <span
                           key={tagIndex}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
                         >
                           {tag}
                         </span>
@@ -395,14 +363,14 @@ export default function ContentIdeas() {
                   </div>
 
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <h5 className="text-sm font-medium text-gray-700 mb-1">
                       Target Keywords:
                     </h5>
                     <div className="flex flex-wrap gap-1">
                       {idea.targetKeywords.map((keyword, keywordIndex) => (
                         <span
                           key={keywordIndex}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800"
                         >
                           {keyword}
                         </span>
@@ -413,10 +381,10 @@ export default function ContentIdeas() {
 
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <h5 className="text-sm font-medium text-gray-700 mb-1">
                       Thumbnail Ideas:
                     </h5>
-                    <ul className="list-disc list-inside text-gray-600 dark:text-gray-300">
+                    <ul className="list-disc list-inside text-gray-600">
                       {idea.thumbnailIdeas.map((thumbIdea, thumbIndex) => (
                         <li key={thumbIndex}>{thumbIdea}</li>
                       ))}
@@ -424,16 +392,16 @@ export default function ContentIdeas() {
                   </div>
 
                   <div>
-                    <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    <h5 className="text-sm font-medium text-gray-700 mb-1">
                       Estimated View Potential:
                     </h5>
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         idea.estimatedViews === "high"
-                          ? "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200"
+                          ? "bg-orange-100 text-orange-800"
                           : idea.estimatedViews === "medium"
-                          ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200"
-                          : "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-orange-100 text-orange-800"
                       }`}
                     >
                       {idea.estimatedViews.charAt(0).toUpperCase() +
@@ -442,54 +410,30 @@ export default function ContentIdeas() {
                   </div>
                 </div>
 
-                <div className="mt-4">
+                <div className="mt-4 flex justify-end">
                   <button
                     onClick={() => handleGenerateScript(index, false)}
                     disabled={generatingScript === index}
-                    className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white ${
+                    className={`px-4 py-2 rounded-md text-white font-medium ${
                       generatingScript === index
                         ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        : "bg-orange-500 hover:bg-orange-600"
                     }`}
                   >
-                    {generatingScript === index ? (
-                      <>
-                        <svg
-                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <circle
-                            className="opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          ></circle>
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          ></path>
-                        </svg>
-                        Generating Script...
-                      </>
-                    ) : (
-                      "Generate Script"
-                    )}
+                    {generatingScript === index
+                      ? "Generating Script..."
+                      : "Generate Script"}
                   </button>
                 </div>
 
                 {/* Display generated script if available */}
                 {scripts[index] && (
-                  <div className="mt-6 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
-                    <h5 className="text-md font-medium text-gray-900 dark:text-gray-100 mb-4">
+                  <div className="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                    <h5 className="text-md font-medium text-gray-900 mb-4">
                       Generated Script
                     </h5>
-                    <div className="prose prose-lg dark:prose-invert max-w-none">
-                      <div className="text-base text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900 p-6 rounded overflow-auto max-h-[600px] font-outfit markdown-content">
+                    <div className="prose prose-lg max-w-none">
+                      <div className="text-base text-gray-800 bg-gray-50 p-6 rounded overflow-auto max-h-[600px] font-outfit markdown-content">
                         <ReactMarkdown>{scripts[index]}</ReactMarkdown>
                       </div>
                     </div>
