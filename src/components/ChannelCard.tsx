@@ -12,7 +12,7 @@ interface ChannelCardProps {
 export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
   const { channelInfo } = channel;
 
-  // Format subscriber count with commas and abbreviate if large
+  // Format subscriber count with commas and abbr if large
   const formatSubscriberCount = (count: string) => {
     const num = parseInt(count, 10);
     if (num >= 1000000) {
@@ -87,7 +87,8 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
                 fill
                 quality={90}
                 sizes="64px"
-                style={{ objectFit: "cover" }}
+                style={{ objectFit: "cover", borderRadius: "50%" }}
+                className="rounded-full"
               />
             </div>
 
@@ -104,7 +105,7 @@ export default function ChannelCard({ channel, onRemove }: ChannelCardProps) {
               </h3>
               <div className="flex items-center text-sm text-gray-500 mt-1">
                 {channelInfo.customUrl && (
-                  <span className="mr-3">@{channelInfo.customUrl}</span>
+                  <span className="mr-3">{channelInfo.customUrl.startsWith('@') ? channelInfo.customUrl : `@${channelInfo.customUrl}`}</span>
                 )}
                 <span className="mr-3">
                   {formatSubscriberCount(channelInfo.subscriberCount)}{" "}

@@ -64,7 +64,8 @@ export default function ChannelsList({ channels }: ChannelsListProps) {
                   }
                   alt={channel.channelInfo.title}
                   fill
-                  style={{ objectFit: "cover" }}
+                  style={{ objectFit: "cover", borderRadius: "50%" }}
+                  className="rounded-full"
                 />
               </div>
               <p className="mt-2 text-sm font-medium text-gray-800 truncate">

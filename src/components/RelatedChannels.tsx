@@ -584,11 +584,12 @@ export default function RelatedChannels() {
                         <div className="flex items-center">
                           {youtubeChannel ? (
                             <>
-                              <div className="flex-shrink-0 h-10 w-10 mr-3">
+                              <div className="flex-shrink-0 h-10 w-10 mr-3 rounded-full overflow-hidden">
                                 <img
                                   src={youtubeChannel.thumbnailUrl}
                                   alt={`${channel.channelName} thumbnail`}
-                                  className="h-10 w-10 rounded-full"
+                                  className="h-10 w-10 rounded-full object-cover"
+                                  style={{ borderRadius: "50%" }}
                                   onError={(e) => {
                                     // Replace with default image on error
                                     e.currentTarget.src =
