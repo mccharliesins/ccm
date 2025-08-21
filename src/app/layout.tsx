@@ -15,6 +15,10 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Creator Climb",
   description: "Help creators focus and get trending ideas",
+  icons: {
+    icon: "/favicons/android-chrome-192x192.png",
+    apple: "/favicons/android-chrome-192x192.png",
+  },
 };
 
 export default function RootLayout({

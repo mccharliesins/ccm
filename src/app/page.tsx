@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 // Particles component for the dust animation
@@ -389,9 +390,13 @@ export default function Home() {
           <div className="xl:grid xl:grid-cols-3 xl:gap-8">
             <div className="space-y-8 xl:col-span-1">
               <div className="flex items-center">
-                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 flex items-center justify-center text-white font-bold text-xl">
-                  CC
-                </div>
+                <Image
+                  src="/favicons/android-chrome-192x192.png"
+                  alt="Creator Climb Logo"
+                  width={40}
+                  height={40}
+                  className="rounded-full"
+                />
                 <span className="ml-3 text-xl font-bold text-white">
                   Creator Climb
                 </span>
